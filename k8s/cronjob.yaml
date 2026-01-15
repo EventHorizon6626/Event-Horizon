@@ -1,0 +1,109 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: event-horizon-daily
+  namespace: event-horizon
+spec:
+  # Schedule: Daily at 9:00 AM UTC
+  # Format: "minute hour day month weekday"
+  schedule: "0 9 * * *"
+
+  # Timezone (requires Kubernetes 1.25+)
+  # timeZone: "America/New_York"
+
+  # Job history limits
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  # Concurrency policy
+  # - Allow: Allow concurrent runs
+  # - Forbid: Skip new run if previous is still running
+  # - Replace: Cancel old and start new
+  concurrencyPolicy: Forbid
+
+  jobTemplate:
+    spec:
+      # Job will be deleted after 24 hours
+      ttlSecondsAfterFinished: 86400
+
+      template:
+        metadata:
+          labels:
+            app: event-horizon
+            job: cronjob
+        spec:
+          containers:
+          - name: event-horizon
+            image: event-horizon:latest
+            imagePullPolicy: Always
+
+            # Resource limits
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "2Gi"
+                cpu: "2000m"
+
+            # Environment variables
+            env:
+            - name: NEWS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: event-horizon-secrets
+                  key: NEWS_API_KEY
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+
+            # Volume mounts
+            volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: results
+              mountPath: /app/results
+            - name: logs
+              mountPath: /app/logs
+
+          # Volumes
+          volumes:
+          - name: config
+            configMap:
+              name: event-horizon-config
+          - name: results
+            persistentVolumeClaim:
+              claimName: event-horizon-results-pvc
+          - name: logs
+            persistentVolumeClaim:
+              claimName: event-horizon-logs-pvc
+
+          # Restart policy for jobs
+          restartPolicy: OnFailure
+
+          # Security context
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+
+---
+# Alternative schedules (uncomment as needed):
+
+# Every hour
+# schedule: "0 * * * *"
+
+# Every 6 hours
+# schedule: "0 */6 * * *"
+
+# Every Monday at 9 AM
+# schedule: "0 9 * * 1"
+
+# Every weekday at 9 AM
+# schedule: "0 9 * * 1-5"
+
+# First day of month at midnight
+# schedule: "0 0 1 * *"

@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Main Event Horizon application
+  event-horizon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: event-horizon:latest
+    container_name: event-horizon-app
+
+    # Environment variables
+    environment:
+      - NEWS_API_KEY=${NEWS_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+
+    # Mount configuration and output directories
+    volumes:
+      # Configuration
+      - ./config.yaml:/app/config.yaml:ro
+      - ./.env:/app/.env:ro
+
+      # Output directories (persist results)
+      - ./results:/app/results
+      - ./logs:/app/logs
+      - ./data:/app/data
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Optional: Database for storing results (future use)
+  # Uncomment when you add database support
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: event-horizon-db
+  #   environment:
+  #     - POSTGRES_DB=event_horizon
+  #     - POSTGRES_USER=eventuser
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+
+  # Optional: Redis for caching (future use)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: event-horizon-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   command: redis-server --appendonly yes
+
+# Volumes (uncomment when using database/redis)
+# volumes:
+#   postgres_data:
+#   redis_data:
+
+# Network (optional - for multi-container communication)
+networks:
+  default:
+    name: event-horizon-network
