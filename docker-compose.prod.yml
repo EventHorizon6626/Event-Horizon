@@ -1,0 +1,70 @@
+version: '3.8'
+
+# Production Docker Compose
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  event-horizon:
+    image: event-horizon:latest
+    container_name: event-horizon-prod
+
+    environment:
+      - NEWS_API_KEY=${NEWS_API_KEY}
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+
+    volumes:
+      # Configuration (read-only)
+      - ./config.prod.yaml:/app/config.yaml:ro
+      - ./.env:/app/.env:ro
+
+      # Output directories (persistent storage)
+      - event_horizon_results:/app/results
+      - event_horizon_logs:/app/logs
+      - event_horizon_data:/app/data
+
+    restart: always
+
+    # Resource limits (production)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+      # Restart policy
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+        compress: "true"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Named volumes for persistence
+volumes:
+  event_horizon_results:
+    driver: local
+  event_horizon_logs:
+    driver: local
+  event_horizon_data:
+    driver: local
+
+networks:
+  default:
+    name: event-horizon-prod

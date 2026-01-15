@@ -1,0 +1,48 @@
+# Event Horizon - Agent Configuration
+# Enable/disable agents easily for deployment
+
+agents:
+  # News Agent - Retrieves financial news articles
+  news_agent:
+    enabled: false  # Set to true to enable
+    config:
+      max_articles_per_stock: 5
+      days_back: 7
+      language: "en"
+
+  # Report Agent - Retrieves earnings reports and fund data
+  report_agent:
+    enabled: true  # Set to false to disable
+    config:
+      include_financials: true
+      earnings_periods: 4
+      top_holdings: 10
+      download_sec_filings: false  # Set to true to download actual PDF reports from SEC
+
+# API Keys (can also use .env file)
+api_keys:
+  news_api_key: ${NEWS_API_KEY}  # From environment variable
+
+# Data Sources
+data_sources:
+  # yfinance - Free, scraped data from Yahoo Finance
+  yfinance:
+    enabled: true
+    description: "Parsed earnings data, fund info, NOT official SEC filings"
+
+  # SEC EDGAR - Official company filings (10-K, 10-Q, 8-K)
+  sec_edgar:
+    enabled: false
+    description: "Download actual PDF/HTML reports filed with SEC"
+    base_url: "https://www.sec.gov"
+
+# Logging
+logging:
+  level: "INFO"
+  save_to_file: true
+
+# Output
+output:
+  save_json: true
+  json_directory: "."
+  pretty_print: true
