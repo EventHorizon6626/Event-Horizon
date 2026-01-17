@@ -141,9 +141,12 @@ class MassiveChartClient:
             self.logger.info(f"Massive.com API Response: {json.dumps(data, indent=2)}")
 
             # Check response status
-            if data.get("status") != "OK":
+            # "DELAYED" means delayed market data (not real-time), which is valid
+            # "OK" means real-time data
+            status = data.get("status")
+            if status not in ["OK", "DELAYED"]:
                 raise ValueError(
-                    f"API returned non-OK status: {data.get('status')} - "
+                    f"API returned error status: {status} - "
                     f"{data.get('error', 'Unknown error')}"
                 )
 
@@ -196,7 +199,8 @@ class MassiveChartClient:
                 "total_candles": len(candles),
                 "first_date": candles[0]["date"] if candles else None,
                 "last_date": candles[-1]["date"] if candles else None,
-                "source": "massive.com"
+                "source": "massive.com",
+                "data_type": status.lower()  # "ok" (real-time) or "delayed"
             }
 
             # Log complete candle data
