@@ -111,23 +111,29 @@ class FinancialDataClient:
 
         # Earnings data
         try:
+            self.logger.info("Fetching earnings data (quarterly & annual)...")
             earnings_data = self._get_earnings_data(ticker)
             reports["earnings"] = earnings_data
+
+            # Log what we got
+            quarterly_count = len(earnings_data.get("quarterly", []))
+            annual_count = len(earnings_data.get("annual", []))
+            self.logger.info(f"✓ Retrieved {quarterly_count} quarterly earnings, {annual_count} annual earnings")
         except Exception as e:
             self.logger.warning(f"Failed to fetch earnings: {str(e)}")
             reports["earnings"] = None
 
         # Earnings calendar (upcoming dates)
         try:
+            self.logger.info("Fetching earnings calendar (upcoming earnings date)...")
             calendar = ticker.calendar
             if calendar is not None and not calendar.empty:
+                earnings_date = calendar.get("Earnings Date", [None])[0]
                 reports["calendar"] = {
                     "earnings_date": (
-                        calendar.get("Earnings Date", [None])[0].isoformat()
-                        if hasattr(
-                            calendar.get("Earnings Date", [None])[0], "isoformat"
-                        )
-                        else str(calendar.get("Earnings Date", [None])[0])
+                        earnings_date.isoformat()
+                        if hasattr(earnings_date, "isoformat")
+                        else str(earnings_date)
                     ),
                     "earnings_estimate": (
                         float(calendar.get("Earnings Average", [0])[0])
@@ -140,7 +146,9 @@ class FinancialDataClient:
                         else None
                     ),
                 }
+                self.logger.info(f"✓ Next earnings date: {reports['calendar']['earnings_date']}")
             else:
+                self.logger.info("⚠ No earnings calendar available")
                 reports["calendar"] = None
         except Exception as e:
             self.logger.warning(f"Failed to fetch calendar: {str(e)}")
@@ -148,13 +156,21 @@ class FinancialDataClient:
 
         # Financial statements
         try:
+            self.logger.info("Fetching financial statements (income, balance sheet, cash flow)...")
             financials = self._get_financial_statements(ticker)
             reports["financials"] = financials
+
+            # Log what we got
+            has_income = financials.get("income_statement") is not None
+            has_balance = financials.get("balance_sheet") is not None
+            has_cashflow = financials.get("cash_flow") is not None
+            self.logger.info(f"✓ Financials - Income: {has_income}, Balance: {has_balance}, CashFlow: {has_cashflow}")
         except Exception as e:
             self.logger.warning(f"Failed to fetch financials: {str(e)}")
             reports["financials"] = None
 
         # Key metrics from info
+        self.logger.info("Extracting key metrics (P/E, market cap, etc.)...")
         reports["metrics"] = {
             "market_cap": info.get("marketCap"),
             "pe_ratio": info.get("trailingPE"),
@@ -166,6 +182,11 @@ class FinancialDataClient:
             "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
         }
 
+        market_cap = reports["metrics"].get("market_cap")
+        pe_ratio = reports["metrics"].get("pe_ratio")
+        self.logger.info(f"✓ Metrics - Market Cap: ${market_cap:,.0f} | P/E: {pe_ratio}" if market_cap else "✓ Metrics extracted")
+
+        self.logger.info("✅ Stock reports compilation complete")
         return reports
 
     def _get_earnings_data(self, ticker: yf.Ticker) -> Dict[str, Any]:
@@ -184,29 +205,35 @@ class FinancialDataClient:
         try:
             quarterly = ticker.quarterly_earnings
             if quarterly is not None and not quarterly.empty:
+                self.logger.info(f"  - Processing {len(quarterly.head(8))} quarterly earnings reports...")
                 quarterly_list = []
                 for date, row in quarterly.head(8).iterrows():  # Last 8 quarters
-                    quarterly_list.append(
-                        {
-                            "date": (
-                                date.isoformat()
-                                if hasattr(date, "isoformat")
-                                else str(date)
-                            ),
-                            "revenue": (
-                                float(row.get("Revenue", 0))
-                                if row.get("Revenue") is not None
-                                else None
-                            ),
-                            "earnings": (
-                                float(row.get("Earnings", 0))
-                                if row.get("Earnings") is not None
-                                else None
-                            ),
-                        }
-                    )
+                    quarter_data = {
+                        "date": (
+                            date.isoformat()
+                            if hasattr(date, "isoformat")
+                            else str(date)
+                        ),
+                        "revenue": (
+                            float(row.get("Revenue", 0))
+                            if row.get("Revenue") is not None
+                            else None
+                        ),
+                        "earnings": (
+                            float(row.get("Earnings", 0))
+                            if row.get("Earnings") is not None
+                            else None
+                        ),
+                    }
+                    quarterly_list.append(quarter_data)
+
+                    # Log first quarter as sample
+                    if len(quarterly_list) == 1:
+                        self.logger.info(f"    Sample Q: {quarter_data['date']} - Revenue: ${quarter_data['revenue']:,.0f}, Earnings: ${quarter_data['earnings']:,.0f}" if quarter_data['revenue'] else f"    Sample Q: {quarter_data['date']}")
+
                 earnings["quarterly"] = quarterly_list
             else:
+                self.logger.info("  - No quarterly earnings data available")
                 earnings["quarterly"] = []
         except Exception as e:
             self.logger.warning(f"Failed to parse quarterly earnings: {str(e)}")
@@ -216,25 +243,31 @@ class FinancialDataClient:
         try:
             annual = ticker.earnings
             if annual is not None and not annual.empty:
+                self.logger.info(f"  - Processing {len(annual.head(5))} annual earnings reports...")
                 annual_list = []
                 for date, row in annual.head(5).iterrows():  # Last 5 years
-                    annual_list.append(
-                        {
-                            "year": str(date),
-                            "revenue": (
-                                float(row.get("Revenue", 0))
-                                if row.get("Revenue") is not None
-                                else None
-                            ),
-                            "earnings": (
-                                float(row.get("Earnings", 0))
-                                if row.get("Earnings") is not None
-                                else None
-                            ),
-                        }
-                    )
+                    year_data = {
+                        "year": str(date),
+                        "revenue": (
+                            float(row.get("Revenue", 0))
+                            if row.get("Revenue") is not None
+                            else None
+                        ),
+                        "earnings": (
+                            float(row.get("Earnings", 0))
+                            if row.get("Earnings") is not None
+                            else None
+                        ),
+                    }
+                    annual_list.append(year_data)
+
+                    # Log most recent year as sample
+                    if len(annual_list) == 1:
+                        self.logger.info(f"    Sample Year: {year_data['year']} - Revenue: ${year_data['revenue']:,.0f}, Earnings: ${year_data['earnings']:,.0f}" if year_data['revenue'] else f"    Sample Year: {year_data['year']}")
+
                 earnings["annual"] = annual_list
             else:
+                self.logger.info("  - No annual earnings data available")
                 earnings["annual"] = []
         except Exception as e:
             self.logger.warning(f"Failed to parse annual earnings: {str(e)}")
@@ -256,6 +289,7 @@ class FinancialDataClient:
 
         try:
             # Income statement (most recent)
+            self.logger.info("  - Fetching income statement...")
             income_stmt = ticker.financials
             if income_stmt is not None and not income_stmt.empty:
                 latest = income_stmt.iloc[:, 0]
@@ -286,7 +320,11 @@ class FinancialDataClient:
                         else None
                     ),
                 }
+                revenue = financials["income_statement"].get("total_revenue")
+                net_income = financials["income_statement"].get("net_income")
+                self.logger.info(f"    ✓ Revenue: ${revenue:,.0f} | Net Income: ${net_income:,.0f}" if revenue else "    ✓ Income statement retrieved")
             else:
+                self.logger.info("    ⚠ No income statement data")
                 financials["income_statement"] = None
         except Exception as e:
             self.logger.warning(f"Failed to parse income statement: {str(e)}")
@@ -294,6 +332,7 @@ class FinancialDataClient:
 
         try:
             # Balance sheet (most recent)
+            self.logger.info("  - Fetching balance sheet...")
             balance_sheet = ticker.balance_sheet
             if balance_sheet is not None and not balance_sheet.empty:
                 latest = balance_sheet.iloc[:, 0]
@@ -325,7 +364,11 @@ class FinancialDataClient:
                         else None
                     ),
                 }
+                assets = financials["balance_sheet"].get("total_assets")
+                equity = financials["balance_sheet"].get("stockholder_equity")
+                self.logger.info(f"    ✓ Assets: ${assets:,.0f} | Equity: ${equity:,.0f}" if assets else "    ✓ Balance sheet retrieved")
             else:
+                self.logger.info("    ⚠ No balance sheet data")
                 financials["balance_sheet"] = None
         except Exception as e:
             self.logger.warning(f"Failed to parse balance sheet: {str(e)}")
@@ -333,6 +376,7 @@ class FinancialDataClient:
 
         try:
             # Cash flow (most recent)
+            self.logger.info("  - Fetching cash flow statement...")
             cash_flow = ticker.cashflow
             if cash_flow is not None and not cash_flow.empty:
                 latest = cash_flow.iloc[:, 0]
@@ -363,7 +407,11 @@ class FinancialDataClient:
                         else None
                     ),
                 }
+                ocf = financials["cash_flow"].get("operating_cash_flow")
+                fcf = financials["cash_flow"].get("free_cash_flow")
+                self.logger.info(f"    ✓ Operating CF: ${ocf:,.0f} | Free CF: ${fcf:,.0f}" if ocf else "    ✓ Cash flow retrieved")
             else:
+                self.logger.info("    ⚠ No cash flow data")
                 financials["cash_flow"] = None
         except Exception as e:
             self.logger.warning(f"Failed to parse cash flow: {str(e)}")
