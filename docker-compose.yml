@@ -1,38 +1,47 @@
 services:
-  backend:
+  event-horizon:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: eventhorizon-backend
-    ports:
-      - "5000:5000"
+    image: event-horizon:latest
+    container_name: event-horizon
+
     environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=5000
       - NEWS_API_KEY=${NEWS_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=INFO
+
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./.env:/app/.env:ro
-      - backend-results:/app/results
-      - backend-logs:/app/logs
-    command: python api_server.py
+      - ./results:/app/results
+      - ./logs:/app/logs
+      - ./data:/app/data
+
     restart: unless-stopped
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    networks:
-      - eventhorizon-network
+      start_period: 5s
 
 networks:
-  eventhorizon-network:
-    name: eventhorizon-network
-    driver: bridge
-
-volumes:
-  backend-results:
-  backend-logs:
+  default:
+    name: event-horizon-network
