@@ -13,7 +13,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 class MassiveChartClient:
     """Client for fetching candlestick chart data from Massive.com API"""
 
-    BASE_URL = "https://api.massive.com"  # Update with actual base URL
+    BASE_URL = "https://api.massive.com/v3"
 
     # Timespan mappings
     TIMESPAN_MAP = {
@@ -116,9 +116,9 @@ class MassiveChartClient:
             to_str = to_date.strftime("%Y-%m-%d")
 
             # Build API URL
-            # Format: /v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}
+            # Format: /v3/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}
             url = (
-                f"{self.BASE_URL}/v2/aggs/ticker/{symbol.upper()}"
+                f"{self.BASE_URL}/aggs/ticker/{symbol.upper()}"
                 f"/range/{multiplier}/{timespan}/{from_str}/{to_str}"
             )
 
