@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 # Import existing agents
 from agents.news_agent import NewsAgent
 from agents.report_agent import ReportAnalysisAgent
+from agents.chart_agent import ChartDataAgent
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +23,7 @@ load_dotenv()
 # Agent configuration - Enable/Disable via environment variables
 ENABLE_NEWS_AGENT = os.getenv("ENABLE_NEWS_AGENT", "false").lower() == "true"
 ENABLE_REPORT_AGENT = os.getenv("ENABLE_REPORT_AGENT", "true").lower() == "true"
+ENABLE_CHART_AGENT = os.getenv("ENABLE_CHART_AGENT", "true").lower() == "true"
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +33,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Log agent configuration
-logger.info(f"Agent Configuration: NewsAgent={'enabled' if ENABLE_NEWS_AGENT else 'disabled'}, ReportAgent={'enabled' if ENABLE_REPORT_AGENT else 'disabled'}")
+logger.info(f"Agent Configuration: NewsAgent={'enabled' if ENABLE_NEWS_AGENT else 'disabled'}, ReportAgent={'enabled' if ENABLE_REPORT_AGENT else 'disabled'}, ChartAgent={'enabled' if ENABLE_CHART_AGENT else 'disabled'}")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -82,7 +84,8 @@ async def health_check():
         "service": "event-horizon-ai",
         "agents": {
             "news_agent": "enabled" if ENABLE_NEWS_AGENT else "disabled",
-            "report_agent": "enabled" if ENABLE_REPORT_AGENT else "disabled"
+            "report_agent": "enabled" if ENABLE_REPORT_AGENT else "disabled",
+            "chart_agent": "enabled" if ENABLE_CHART_AGENT else "disabled"
         }
     }
 
@@ -238,6 +241,64 @@ async def root():
             "analyze_portfolio": "/api/portfolio/analyze",
             "get_news": "/api/news",
             "get_reports": "/api/reports",
+            "get_chart_data": "/api/chart",
+            "docs": "/docs"
+        }
+    }
+
+# Get candlestick chart data for stocks
+@app.post("/api/chart")
+async def get_chart_data(request: PortfolioAnalysisRequest):
+    """
+    Get candlestick/OHLCV chart data for specific stock symbols.
+
+    Query parameters:
+    - period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, max (default: 1mo)
+    - interval: 1m, 5m, 15m, 1h, 1d, 1wk, 1mo (default: 1d)
+    """
+    try:
+        from fastapi import Query
+
+        # Get optional query parameters (with defaults)
+        period = request.__dict__.get("period", "1mo")
+        interval = request.__dict__.get("interval", "1d")
+
+        logger.info(f"Fetching chart data for stocks: {request.stocks} (period={period}, interval={interval})")
+
+        if not ENABLE_CHART_AGENT:
+            raise HTTPException(
+                status_code=503,
+                detail="ChartAgent is disabled. Enable it by setting ENABLE_CHART_AGENT=true in .env"
+            )
+
+        chart_agent = ChartDataAgent(config={"period": period, "interval": interval})
+        result = chart_agent.execute(request.stocks)
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching chart data: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chart data fetch failed: {str(e)}"
+        )
+
+# Root endpoint (moved back after chart endpoint)
+@app.get("/")
+async def root_redirect():
+    """API root endpoint with service information."""
+    return {
+        "service": "Event Horizon AI API",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "analyze_portfolio": "/api/portfolio/analyze",
+            "get_news": "/api/news",
+            "get_reports": "/api/reports",
+            "get_chart_data": "/api/chart",
             "docs": "/docs"
         }
     }
