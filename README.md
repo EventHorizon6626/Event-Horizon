@@ -18,7 +18,7 @@ docker-compose up -d --build
 curl http://localhost:5000/health
 ```
 
-**See:** [QUICK_DEPLOY.md](Event-Horizon%20AI%20md/QUICK_DEPLOY.md) for detailed instructions.
+📖 **See:** [Quick Start Guide](docs/guides/quick-start.md) for detailed instructions.
 
 ---
 
@@ -33,26 +33,34 @@ Frontend → Backend API → AI Service (localhost:5000)
 
 **Option 2 Architecture:** Backend proxies requests to AI service (localhost-only, secure)
 
-**See:** [ARCHITECTURE.md](Event-Horizon%20AI%20md/ARCHITECTURE.md) for full architecture details.
+📖 **See:** [System Architecture](docs/architecture/system-architecture.md) for full details.
 
 ---
 
 ## Documentation
 
-### Deployment
-- **[QUICK_DEPLOY.md](Event-Horizon%20AI%20md/QUICK_DEPLOY.md)** - Fast deployment guide
-- **[DOCKER_DEPLOY.md](Event-Horizon%20AI%20md/DOCKER_DEPLOY.md)** - Complete Docker deployment guide
-- **[BACKEND_INTEGRATION.md](Event-Horizon%20AI%20md/BACKEND_INTEGRATION.md)** - Node.js backend proxy setup
+### 🚀 Getting Started
+- **[Quick Start](docs/guides/quick-start.md)** - Fast deployment guide
+- **[Docker Deployment](docs/guides/docker-deploy.md)** - Complete Docker guide
+- **[Configuration](docs/guides/configuration.md)** - Environment setup
 
-### Getting Started
-- **[QUICKSTART.md](Event-Horizon%20AI%20md/QUICKSTART.md)** - General quickstart guide
-- **[CONFIG_README.md](Event-Horizon%20AI%20md/CONFIG_README.md)** - Configuration guide
+### 🏗️ Architecture
+- **[System Architecture](docs/architecture/system-architecture.md)** - Complete system design
+- **[Backend Integration](docs/architecture/backend-integration.md)** - Node.js proxy setup
+- **[Multi-Agent Design](docs/architecture/multi-agent-design.md)** - Agent patterns
 
-### Architecture & Design
-- **[ARCHITECTURE.md](Event-Horizon%20AI%20md/ARCHITECTURE.md)** - System architecture
-- **[docs/multi-agent-architecture.md](docs/multi-agent-architecture.md)** - Multi-agent design patterns
-- **[docs/news-agent-design.md](docs/news-agent-design.md)** - NewsAgent design
-- **[docs/report-agent-design.md](docs/report-agent-design.md)** - ReportAgent design
+### 🤖 Agents
+- **[News Agent](docs/agents/news-agent.md)** - NewsAgent design & implementation
+- **[Report Agent](docs/agents/report-agent.md)** - ReportAgent design & implementation
+
+### 📚 Guides
+- **[Usage Guide](docs/guides/usage.md)** - How to use the API
+- **[Data Sources](docs/guides/data-sources.md)** - Understanding data sources
+- **[Advanced Configuration](docs/guides/configuration-advanced.md)** - Advanced settings
+
+### 📖 References
+- **[Architecture Overview](docs/references/architecture-overview.md)** - High-level overview
+- **[Design Patterns](docs/references/20-agentic-design-patterns.md)** - Agentic patterns
 
 ---
 
@@ -92,10 +100,13 @@ Event-Horizon-AI/
 ├── services/                      # External services
 │   ├── news_api_client.py
 │   └── yahoo_finance_client.py
+├── docs/                          # Documentation
+│   ├── guides/                    # User guides
+│   ├── architecture/              # Architecture docs
+│   ├── agents/                    # Agent-specific docs
+│   └── references/                # Reference materials
 ├── api_server.py                  # FastAPI server
 ├── docker-compose.yml             # Docker deployment
-├── Event-Horizon AI md/           # Documentation
-├── docs/                          # Agent design docs
 └── README.md                      # This file
 ```
 
@@ -220,10 +231,10 @@ Proprietary - Event Horizon Project
 ## Support
 
 For issues or questions, check the documentation:
-- [Deployment Issues](Event-Horizon%20AI%20md/DOCKER_DEPLOY.md#troubleshooting)
-- [Architecture Questions](Event-Horizon%20AI%20md/ARCHITECTURE.md)
-- [Configuration Help](Event-Horizon%20AI%20md/CONFIG_README.md)
+- [Deployment Issues](docs/guides/docker-deploy.md#troubleshooting)
+- [Architecture Questions](docs/architecture/system-architecture.md)
+- [Configuration Help](docs/guides/configuration.md)
 
 ---
 
-**Ready to deploy?** → [QUICK_DEPLOY.md](Event-Horizon%20AI%20md/QUICK_DEPLOY.md)
+**Ready to deploy?** → [Quick Start Guide](docs/guides/quick-start.md)
