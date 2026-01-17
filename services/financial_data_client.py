@@ -1,6 +1,7 @@
 """Financial Data Client for retrieving earnings and fund reports"""
 
 import logging
+import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -119,6 +120,9 @@ class FinancialDataClient:
             quarterly_count = len(earnings_data.get("quarterly", []))
             annual_count = len(earnings_data.get("annual", []))
             self.logger.info(f"✓ Retrieved {quarterly_count} quarterly earnings, {annual_count} annual earnings")
+
+            # Log the actual data
+            self.logger.info(f"📊 EARNINGS DATA:\n{json.dumps(earnings_data, indent=2)}")
         except Exception as e:
             self.logger.warning(f"Failed to fetch earnings: {str(e)}")
             reports["earnings"] = None
@@ -147,6 +151,9 @@ class FinancialDataClient:
                     ),
                 }
                 self.logger.info(f"✓ Next earnings date: {reports['calendar']['earnings_date']}")
+
+                # Log the actual calendar data
+                self.logger.info(f"📅 EARNINGS CALENDAR:\n{json.dumps(reports['calendar'], indent=2)}")
             else:
                 self.logger.info("⚠ No earnings calendar available")
                 reports["calendar"] = None
@@ -165,6 +172,9 @@ class FinancialDataClient:
             has_balance = financials.get("balance_sheet") is not None
             has_cashflow = financials.get("cash_flow") is not None
             self.logger.info(f"✓ Financials - Income: {has_income}, Balance: {has_balance}, CashFlow: {has_cashflow}")
+
+            # Log the actual financial statements data
+            self.logger.info(f"💰 FINANCIAL STATEMENTS:\n{json.dumps(financials, indent=2)}")
         except Exception as e:
             self.logger.warning(f"Failed to fetch financials: {str(e)}")
             reports["financials"] = None
@@ -186,7 +196,14 @@ class FinancialDataClient:
         pe_ratio = reports["metrics"].get("pe_ratio")
         self.logger.info(f"✓ Metrics - Market Cap: ${market_cap:,.0f} | P/E: {pe_ratio}" if market_cap else "✓ Metrics extracted")
 
+        # Log the actual metrics data
+        self.logger.info(f"📈 KEY METRICS:\n{json.dumps(reports['metrics'], indent=2)}")
+
         self.logger.info("✅ Stock reports compilation complete")
+
+        # Log complete report summary
+        self.logger.info(f"📑 COMPLETE STOCK REPORT SUMMARY:\n{json.dumps(reports, indent=2, default=str)}")
+
         return reports
 
     def _get_earnings_data(self, ticker: yf.Ticker) -> Dict[str, Any]:
