@@ -10,7 +10,7 @@ Fast deployment guide for AI service using Docker.
 cd ~/EventHorizon/Event-Horizon-AI
 cp .env.example .env
 nano .env  # Add your NEWS_API_KEY
-docker-compose -f docker-compose.localhost.yml up -d --build
+docker-compose up -d --build
 ```
 
 ---
@@ -34,7 +34,7 @@ LOG_LEVEL=INFO
 ### 2. Deploy
 
 ```bash
-docker-compose -f docker-compose.localhost.yml up -d --build
+docker-compose up -d --build
 ```
 
 ### 3. Verify
@@ -59,7 +59,7 @@ Expected:
 ```bash
 cd ~/EventHorizon/Event-Horizon-AI
 git pull origin main
-docker-compose -f docker-compose.localhost.yml up -d --build
+docker-compose up -d --build
 ```
 
 ---
@@ -71,10 +71,13 @@ docker-compose -f docker-compose.localhost.yml up -d --build
 docker logs -f event-horizon-ai
 
 # Restart
-docker-compose -f docker-compose.localhost.yml restart
+docker-compose restart
 
 # Stop
-docker-compose -f docker-compose.localhost.yml down
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
 ```
 
 ---
