@@ -19,12 +19,19 @@ from agents.report_agent import ReportAnalysisAgent
 # Load environment variables
 load_dotenv()
 
+# Agent configuration - Enable/Disable via environment variables
+ENABLE_NEWS_AGENT = os.getenv("ENABLE_NEWS_AGENT", "false").lower() == "true"
+ENABLE_REPORT_AGENT = os.getenv("ENABLE_REPORT_AGENT", "true").lower() == "true"
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Log agent configuration
+logger.info(f"Agent Configuration: NewsAgent={'enabled' if ENABLE_NEWS_AGENT else 'disabled'}, ReportAgent={'enabled' if ENABLE_REPORT_AGENT else 'disabled'}")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -72,7 +79,11 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "service": "event-horizon-ai"
+        "service": "event-horizon-ai",
+        "agents": {
+            "news_agent": "enabled" if ENABLE_NEWS_AGENT else "disabled",
+            "report_agent": "enabled" if ENABLE_REPORT_AGENT else "disabled"
+        }
     }
 
 # Main portfolio analysis endpoint
@@ -96,23 +107,31 @@ async def analyze_portfolio(request: PortfolioAnalysisRequest):
                 detail="No stocks provided. Please provide at least one stock symbol."
             )
 
-        # Initialize agents
-        news_agent = NewsAgent(
-            name="NewsAgent",
-            description="Fetches financial news for portfolio stocks"
-        )
+        # Initialize and execute enabled agents
+        news_result = {"success": False, "data": {}, "message": "NewsAgent is disabled"}
+        report_result = {"success": False, "data": {}, "message": "ReportAgent is disabled"}
 
-        report_agent = ReportAnalysisAgent(
-            name="ReportAnalysisAgent",
-            description="Analyzes financial reports and metrics"
-        )
+        # Execute NewsAgent if enabled
+        if ENABLE_NEWS_AGENT:
+            logger.info("Executing NewsAgent...")
+            news_agent = NewsAgent(
+                name="NewsAgent",
+                description="Fetches financial news for portfolio stocks"
+            )
+            news_result = news_agent.execute(symbols=request.stocks)
+        else:
+            logger.info("NewsAgent is disabled - skipping")
 
-        # Execute agents with portfolio stocks
-        logger.info("Executing NewsAgent...")
-        news_result = news_agent.execute(symbols=request.stocks)
-
-        logger.info("Executing ReportAnalysisAgent...")
-        report_result = report_agent.execute(symbols=request.stocks)
+        # Execute ReportAgent if enabled
+        if ENABLE_REPORT_AGENT:
+            logger.info("Executing ReportAnalysisAgent...")
+            report_agent = ReportAnalysisAgent(
+                name="ReportAnalysisAgent",
+                description="Analyzes financial reports and metrics"
+            )
+            report_result = report_agent.execute(symbols=request.stocks)
+        else:
+            logger.info("ReportAgent is disabled - skipping")
 
         # Build summary statistics
         summary = {
