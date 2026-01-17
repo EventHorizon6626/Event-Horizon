@@ -6,13 +6,491 @@ Guide for scaling Event Horizon to support many AI agents with orchestration.
 
 ## Table of Contents
 
-1. [Current Architecture](#current-architecture)
-2. [Future Architecture (Multi-Agent)](#future-architecture-multi-agent)
-3. [Adding New Agents](#adding-new-agents)
-4. [Agent Orchestration](#agent-orchestration)
-5. [Communication Patterns](#communication-patterns)
-6. [Deployment Strategies](#deployment-strategies)
-7. [Monitoring & Observability](#monitoring--observability)
+1. [Three-Layer Agent Architecture (Vision)](#three-layer-agent-architecture-vision)
+2. [Current Architecture](#current-architecture)
+3. [Future Architecture (Multi-Agent)](#future-architecture-multi-agent)
+4. [Adding New Agents](#adding-new-agents)
+5. [Agent Orchestration](#agent-orchestration)
+6. [Communication Patterns](#communication-patterns)
+7. [Deployment Strategies](#deployment-strategies)
+8. [Monitoring & Observability](#monitoring--observability)
+
+---
+
+## Three-Layer Agent Architecture (Vision)
+
+### Overview
+
+Event Horizon's ultimate architecture follows a three-layer data processing pipeline, where raw heterogeneous data flows through retrieval → normalization → feature extraction to produce actionable trading signals.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         LAYER 1: DATA RETRIEVAL                         │
+│                     (Heterogeneous Data Collection)                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
+│  │ Candlestick  │  │   Earnings   │  │     News     │  │  SEC       │ │
+│  │ Data Agent   │  │ Report Agent │  │ Agent        │  │  Filings   │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └────────────┘ │
+│                                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
+│  │ Social Media │  │ Options Flow │  │ Insider      │  │  Macro     │ │
+│  │ Sentiment    │  │ Agent        │  │ Trading      │  │  Economic  │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └────────────┘ │
+│                                                                         │
+│                              ↓  ↓  ↓                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  LAYER 2: NORMALIZATION & STANDARDIZATION               │
+│                      (Create Unified "DNA" Dataset)                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
+│  │ Data Filter  │  │ Time Sync    │  │ Symbol       │  │  Format    │ │
+│  │ Agent        │  │ Agent        │  │ Mapper       │  │  Normalizer│ │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └────────────┘ │
+│                                                                         │
+│              ┌─────────────────────────────────────┐                   │
+│              │  Standardized Tabular "DNA" Schema  │                   │
+│              │  ┌───────────────────────────────┐  │                   │
+│              │  │ • Company Health Metrics      │  │                   │
+│              │  │ • Investor Sentiment Metrics  │  │                   │
+│              │  │ • Market Technical Metrics    │  │                   │
+│              │  │ • Macro/External Metrics      │  │                   │
+│              │  │ • Risk Metrics                │  │                   │
+│              │  └───────────────────────────────┘  │                   │
+│              └─────────────────────────────────────┘                   │
+│                              ↓                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    LAYER 3: FEATURE EXTRACTION                          │
+│              (LLM/Neural AI - Intelligent Feature Discovery)            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │          Tabular LLM / Neural Network Feature Extractor          │  │
+│  │                                                                  │  │
+│  │  • Reads standardized tabular "DNA" data                        │  │
+│  │  • Extracts non-obvious patterns and correlations               │  │
+│  │  • Generates embeddings and latent features                     │  │
+│  │  • Identifies predictive signals for trading                    │  │
+│  │                                                                  │  │
+│  │  Potential Frameworks:                                           │  │
+│  │  - ToolOrchestra (multi-model orchestration)                    │  │
+│  │  - TabLLM (LLM for tabular data)                                │  │
+│  │  - Custom neural architectures                                  │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│                              ↓                                          │
+│                                                                         │
+│                    🎯 Actionable Trading Signals                        │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Layer 1: Data Retrieval Agents
+
+**Purpose**: Collect heterogeneous data from various sources
+
+**Agent Types**:
+
+| Agent Category | Examples | Data Output |
+|----------------|----------|-------------|
+| **Price Data** | Candlestick Agent, Options Chain Agent | OHLCV, Greeks, IV |
+| **Fundamentals** | Earnings Report Agent, SEC Filings Agent | Revenue, EPS, Balance Sheet |
+| **News & Media** | News Scraper, Social Media Agent, Reddit Sentiment | Articles, Posts, Sentiment Raw |
+| **Market Data** | Options Flow Agent, Insider Trading Agent | Large trades, Executive buys/sells |
+| **Macro Data** | Economic Indicators Agent, Sector Performance | GDP, Inflation, Sector Returns |
+
+**Characteristics**:
+- Each agent specializes in ONE data source
+- Output format is agent-specific (JSON, CSV, raw text)
+- Agents run independently and in parallel
+- No standardization at this layer
+
+---
+
+### Layer 2: Normalization & Standardization Agents
+
+**Purpose**: Transform heterogeneous data into a unified, standardized tabular format (the "DNA" dataset)
+
+**Agent Responsibilities**:
+
+1. **Data Filtering**
+   - Remove duplicates
+   - Filter by date ranges
+   - Remove null/invalid entries
+
+2. **Time Synchronization**
+   - Align timestamps across sources
+   - Handle different market hours (US, EU, Asia)
+   - Forward-fill/backward-fill missing data
+
+3. **Symbol Mapping**
+   - Normalize ticker symbols (AAPL vs AAPL.US)
+   - Handle splits, mergers, name changes
+   - Map to unique identifiers (CUSIP, ISIN)
+
+4. **Format Standardization**
+   - Convert all data to tabular rows
+   - Apply consistent column names
+   - Normalize units (%, basis points, currency)
+
+**Output: Standardized "DNA" Schema**
+
+The unified dataset contains these column groups:
+
+#### 1. Company Health Metrics
+Core financial and operational health indicators:
+
+```python
+company_health = {
+    # Income Statement
+    'revenue': float,                    # Total revenue (quarterly)
+    'revenue_growth_yoy': float,         # Year-over-year growth %
+    'net_income': float,                 # Bottom line earnings
+    'earnings_per_share': float,         # EPS (diluted)
+    'earnings_surprise': float,          # Actual vs Expected EPS
+    'operating_margin': float,           # Operating income / Revenue
+    'net_margin': float,                 # Net income / Revenue
+    'gross_margin': float,               # Gross profit / Revenue
+
+    # Balance Sheet
+    'total_assets': float,
+    'total_liabilities': float,
+    'shareholder_equity': float,
+    'cash_and_equivalents': float,
+    'total_debt': float,
+    'current_ratio': float,              # Current assets / Current liabilities
+    'debt_to_equity': float,             # Total debt / Equity
+    'quick_ratio': float,                # (Current assets - Inventory) / Current liab.
+
+    # Cash Flow
+    'operating_cash_flow': float,
+    'free_cash_flow': float,             # OCF - CapEx
+    'capex': float,                      # Capital expenditures
+
+    # Profitability Ratios
+    'return_on_equity': float,           # Net income / Equity (ROE)
+    'return_on_assets': float,           # Net income / Assets (ROA)
+    'return_on_invested_capital': float, # NOPAT / Invested capital (ROIC)
+
+    # Valuation
+    'price_to_earnings': float,          # P/E ratio
+    'price_to_book': float,              # P/B ratio
+    'price_to_sales': float,             # P/S ratio
+    'ev_to_ebitda': float,               # Enterprise value / EBITDA
+}
+```
+
+#### 2. Investor Sentiment Metrics
+Indicators of market participant sentiment and behavior:
+
+```python
+investor_sentiment = {
+    # News Sentiment
+    'news_sentiment_score': float,           # -1 (bearish) to +1 (bullish)
+    'news_sentiment_volume': int,            # Number of articles
+    'news_sentiment_trend': float,           # 7-day sentiment change
+    'news_coverage_change': float,           # % change in article count
+
+    # Social Media Sentiment
+    'social_sentiment_score': float,         # Twitter/Reddit aggregate sentiment
+    'social_mention_volume': int,            # Total mentions
+    'social_engagement_score': float,        # Likes + Retweets + Comments
+    'reddit_wsb_mentions': int,              # WallStreetBets mentions
+
+    # Analyst Ratings
+    'analyst_rating_consensus': float,       # 1 (strong sell) to 5 (strong buy)
+    'analyst_target_price_avg': float,       # Average price target
+    'analyst_upgrades_downgrades': int,      # Net upgrades - downgrades (30d)
+    'analyst_coverage_count': int,           # Number of analysts covering
+
+    # Options Market Sentiment
+    'put_call_ratio': float,                 # Put volume / Call volume
+    'implied_volatility': float,             # ATM IV
+    'iv_percentile': float,                  # IV rank (0-100)
+    'options_flow_sentiment': float,         # Net bullish/bearish flow
+
+    # Insider Activity
+    'insider_buying_count': int,             # Number of insider buy transactions (90d)
+    'insider_selling_count': int,            # Number of insider sell transactions (90d)
+    'insider_net_value': float,              # $ value of net insider buying
+    'insider_ownership_change': float,       # % change in insider ownership
+
+    # Institutional Sentiment
+    'institutional_ownership': float,        # % of shares held by institutions
+    'institutional_ownership_change': float, # % change in inst. ownership (quarterly)
+    'short_interest': float,                 # % of float shorted
+    'short_interest_change': float,          # % change in short interest
+    'days_to_cover': float,                  # Short interest / Avg daily volume
+}
+```
+
+#### 3. Market Technical Metrics
+Price action and technical indicators:
+
+```python
+market_technical = {
+    # Price & Volume
+    'close': float,                          # Closing price
+    'open': float,
+    'high': float,
+    'low': float,
+    'volume': float,
+    'dollar_volume': float,                  # Price * Volume
+    'vwap': float,                           # Volume-weighted average price
+
+    # Returns
+    'return_1d': float,                      # Daily return
+    'return_5d': float,                      # 5-day return
+    'return_20d': float,                     # 20-day return
+    'return_60d': float,                     # 60-day return
+
+    # Volatility
+    'volatility_20d': float,                 # 20-day historical volatility
+    'atr': float,                            # Average True Range
+    'bollinger_width': float,                # Width of Bollinger Bands
+
+    # Momentum Indicators
+    'rsi_14': float,                         # 14-period RSI
+    'macd': float,                           # MACD line
+    'macd_signal': float,                    # MACD signal line
+    'macd_histogram': float,                 # MACD - Signal
+    'stochastic_k': float,                   # Stochastic %K
+    'stochastic_d': float,                   # Stochastic %D
+
+    # Trend Indicators
+    'sma_20': float,                         # 20-day simple moving average
+    'sma_50': float,                         # 50-day SMA
+    'sma_200': float,                        # 200-day SMA
+    'ema_12': float,                         # 12-day exponential MA
+    'ema_26': float,                         # 26-day EMA
+    'adx': float,                            # Average Directional Index (trend strength)
+
+    # Support/Resistance
+    'distance_from_52w_high': float,         # % from 52-week high
+    'distance_from_52w_low': float,          # % from 52-week low
+    'days_since_52w_high': int,
+    'days_since_52w_low': int,
+}
+```
+
+#### 4. Macro/External Metrics
+Broader market and economic context:
+
+```python
+macro_external = {
+    # Sector & Market
+    'sector_return_1d': float,               # Sector index return (1d)
+    'sector_return_5d': float,
+    'sector_relative_strength': float,       # Stock return vs Sector return
+    'market_return_spy': float,              # SPY return (1d)
+    'market_correlation': float,             # 60-day correlation with SPY
+
+    # Economic Indicators (for reference date)
+    'interest_rate_10y': float,              # 10-year treasury yield
+    'vix': float,                            # CBOE Volatility Index
+    'dollar_index': float,                   # DXY US Dollar Index
+
+    # Relative Metrics
+    'beta': float,                           # Beta vs SPY
+    'relative_volume': float,                # Volume / Avg volume
+    'relative_strength_vs_market': float,    # Stock return vs market
+}
+```
+
+#### 5. Risk Metrics
+Quantitative risk measurements:
+
+```python
+risk_metrics = {
+    # Drawdown
+    'max_drawdown_60d': float,               # Max peak-to-trough decline (60d)
+    'current_drawdown': float,               # Current % from peak
+
+    # Risk-Adjusted Returns
+    'sharpe_ratio': float,                   # (Return - RFR) / Volatility
+    'sortino_ratio': float,                  # Return / Downside deviation
+
+    # Value at Risk
+    'var_95': float,                         # 95% Value at Risk (daily)
+    'cvar_95': float,                        # Conditional VaR (expected shortfall)
+
+    # Liquidity Risk
+    'bid_ask_spread': float,                 # % spread
+    'avg_daily_volume': float,               # 20-day average
+    'volume_volatility': float,              # Std dev of volume
+}
+```
+
+**Full DNA Schema Example Row**:
+
+| timestamp | symbol | revenue | eps | news_sentiment_score | put_call_ratio | close | rsi_14 | sector_return_1d | beta | max_drawdown_60d |
+|-----------|--------|---------|-----|---------------------|----------------|-------|--------|------------------|------|------------------|
+| 2025-01-17 | AAPL | 123.5B | 2.10 | 0.65 | 0.85 | 185.50 | 58.3 | 0.012 | 1.15 | -0.08 |
+
+---
+
+### Layer 3: Feature Extraction (LLM/Neural AI)
+
+**Purpose**: Analyze the standardized tabular "DNA" dataset and extract high-level, predictive features for trading signals
+
+**Why LLM/Neural AI for Tabular Data?**
+
+Traditional feature engineering requires domain expertise and manual selection. LLM-based and neural approaches can:
+- Discover non-obvious correlations across 50+ columns
+- Generate embeddings that capture complex relationships
+- Identify regime changes and pattern shifts
+- Perform multi-modal reasoning (combine numeric and text features)
+
+**Potential Frameworks**:
+
+1. **ToolOrchestra** ([arXiv:2511.21689](https://arxiv.org/pdf/2511.21689))
+   - Orchestrates multiple LLMs and specialized tools
+   - Routes queries to appropriate models
+   - Cost-effective inference through model selection
+
+2. **TabLLM / Tabular Foundation Models**
+   - Models pre-trained on tabular data
+   - Can handle mixed data types (numeric, categorical, text)
+   - Transfer learning from large-scale financial datasets
+
+3. **Custom Neural Architectures**
+   - Transformer-based models for time-series tabular data
+   - Attention mechanisms to weigh important features
+   - Multi-task learning (predict returns, volatility, sentiment)
+
+**Feature Extraction Tasks**:
+
+```python
+# Example Layer 3 Agent Interface
+class FeatureExtractionAgent:
+    """
+    Takes standardized DNA dataset and outputs extracted features
+    """
+
+    def extract_features(self, dna_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Args:
+            dna_data: Standardized tabular dataset with all metric groups
+
+        Returns:
+            extracted_features: {
+                'latent_embeddings': np.ndarray,      # 128-dim embedding per stock
+                'predicted_return_5d': float,         # 5-day forward return prediction
+                'predicted_volatility': float,        # Expected volatility
+                'regime_classification': str,         # 'bullish', 'bearish', 'neutral'
+                'feature_importance': Dict[str, float], # Which features matter most
+                'confidence_score': float,            # Model confidence
+            }
+        """
+        pass
+```
+
+**Example Output**:
+
+```json
+{
+  "symbol": "AAPL",
+  "timestamp": "2025-01-17",
+  "extracted_features": {
+    "latent_embedding": [0.45, -0.23, 0.67, ...],  // 128-dimensional vector
+    "predicted_return_5d": 0.028,                   // +2.8% expected return
+    "predicted_volatility": 0.015,                  // 1.5% daily volatility
+    "regime_classification": "bullish",
+    "feature_importance": {
+      "news_sentiment_score": 0.32,                // Most important feature
+      "earnings_surprise": 0.28,
+      "rsi_14": 0.15,
+      "institutional_ownership_change": 0.12
+    },
+    "confidence_score": 0.87,                       // High confidence
+    "trading_signal": "BUY",
+    "risk_adjusted_score": 8.5                      // Out of 10
+  }
+}
+```
+
+---
+
+### Data Flow Example
+
+**Input**: Portfolio of 10 stocks
+
+**Layer 1** → Retrieve data:
+- Candlestick agent fetches OHLCV for 10 stocks
+- Earnings agent fetches Q4 earnings for 10 stocks
+- News agent fetches 50 articles across 10 stocks
+- Social agent fetches 1000+ tweets/posts
+
+**Layer 2** → Normalize:
+- Filter out duplicate articles
+- Sync all timestamps to market close (16:00 EST)
+- Map all tickers to standard format
+- Create unified table: 10 rows (one per stock) × 80+ columns (all metrics)
+
+**Layer 3** → Extract features:
+- LLM/neural model reads the 10×80 table
+- Generates embeddings for each stock
+- Predicts 5-day returns, identifies key drivers
+- Outputs trading signals for each stock
+
+**Final Output**:
+```
+Symbol | Signal | Confidence | Expected Return | Key Drivers
+-------|--------|------------|-----------------|-------------
+AAPL   | BUY    | 87%        | +2.8%          | Earnings surprise, Positive sentiment
+MSFT   | HOLD   | 72%        | +0.5%          | Neutral signals
+TSLA   | SELL   | 91%        | -3.2%          | High put/call ratio, Insider selling
+...
+```
+
+---
+
+### Benefits of Three-Layer Architecture
+
+1. **Modularity**: Each layer can be developed, tested, and scaled independently
+2. **Standardization**: Layer 2 creates a single source of truth (DNA dataset)
+3. **Flexibility**: Easy to add new data sources (Layer 1) without changing downstream
+4. **Intelligence**: Layer 3 can apply cutting-edge ML/LLM techniques
+5. **Scalability**: Parallel processing at each layer
+6. **Debuggability**: Can inspect data quality at each layer boundary
+
+---
+
+### Implementation Roadmap
+
+**Phase 1: Build Layer 1** (Current Focus)
+- ✅ Candlestick agent
+- ✅ Earnings report agent
+- ✅ News agent
+- 🔄 Options flow agent
+- 🔄 Social media agent
+- 🔄 SEC filings agent
+
+**Phase 2: Build Layer 2**
+- 📋 Define full DNA schema (80+ columns)
+- 📋 Build normalization agents
+- 📋 Implement time sync and symbol mapping
+- 📋 Create standardized output format (Parquet/CSV)
+
+**Phase 3: Build Layer 3**
+- 📋 Research tabular LLM frameworks
+- 📋 Train/fine-tune models on financial data
+- 📋 Build feature extraction pipeline
+- 📋 Integrate with trading signal generation
+
+**Phase 4: Orchestration**
+- 📋 Connect all three layers with message queues
+- 📋 Implement monitoring and alerting
+- 📋 Add caching and optimization
+- 📋 Deploy to production
 
 ---
 
