@@ -137,6 +137,9 @@ class MassiveChartClient:
 
             data = response.json()
 
+            # Log full API response for debugging
+            self.logger.info(f"Massive.com API Response: {json.dumps(data, indent=2)}")
+
             # Check response status
             if data.get("status") != "OK":
                 raise ValueError(
