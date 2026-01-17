@@ -1,8 +1,3 @@
-version: '3.8'
-
-# Development Docker Compose
-# Usage: docker-compose -f docker-compose.dev.yml up
-
 services:
   event-horizon:
     build:
@@ -17,11 +12,12 @@ services:
       - PYTHONUNBUFFERED=1
 
     volumes:
-      # Mount source code for hot reload (development)
+      # Mount source code for hot reload
       - ./agents:/app/agents
       - ./services:/app/services
       - ./utils:/app/utils
       - ./main.py:/app/main.py
+      - ./api_server.py:/app/api_server.py
 
       # Configuration
       - ./config.dev.yaml:/app/config.yaml:ro
@@ -30,27 +26,25 @@ services:
       # Output
       - ./results:/app/results
       - ./logs:/app/logs
+      - ./data:/app/data
 
-    # Override command for development
     command: python main.py
 
-    # No restart in dev (want to see crashes)
     restart: "no"
 
-    # Interactive terminal
     stdin_open: true
     tty: true
 
-    # Port exposure (if you add web API later)
     ports:
-      - "8000:8000"  # For future FastAPI/Flask
+      - "8000:8000"
+      - "5000:5000"
 
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
-        max-size: "5m"
+        max-size: 5m
         max-file: "2"
 
 networks:
   default:
-    name: event-horizon-dev
+    name: event-horizon-network

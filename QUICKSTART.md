@@ -1,424 +1,328 @@
 # Event Horizon - Quick Start Guide
 
-Get your multi-agent system running in 5 minutes!
-
-This guide covers both agents:
-- **News Agent**: Retrieves financial news for portfolio stocks
-- **Report Agent**: Fetches earnings reports (stocks) and fund reports (ETFs)
+Get your multi-agent system running in 5 minutes.
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
-- Python 3.8 or higher
-- pip (Python package manager)
-- A free NewsAPI.org account (optional - only for News Agent)
-- Internet connection (for Report Agent to fetch financial data)
-
----
-
-## 🚀 Quick Setup (5 Steps)
-
-### Step 1: Get Your Free API Key
-
-1. Go to [https://newsapi.org/register](https://newsapi.org/register)
-2. Sign up for a free account
-3. Copy your API key from the dashboard
-4. Keep it handy for Step 3
-
-**Free tier limits**: 100 requests/day, perfect for testing!
+- Python 3.8+
+- pip
+- (Optional) NewsAPI.org account for News Agent
 
 ---
 
-### Step 2: Install Dependencies
+## Quick Setup
+
+### 1. Install Dependencies
 
 ```bash
-cd Event-Horizon
+cd Event-Horizon-AI
 
 # Create virtual environment (recommended)
 python3 -m venv venv
-
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-
-# On Windows:
-venv\Scripts\activate
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate   # Windows
 
 # Install packages
 pip install -r requirements.txt
 ```
 
----
-
-### Step 3: Configure API Key
+### 2. Configure API Keys (Optional)
 
 ```bash
-# Copy the example environment file
+# Copy example environment file
 cp .env.example .env
 
-# Edit .env and add your API key
-# Replace "your_newsapi_key_here" with your actual key
-nano .env  # or use your preferred editor
+# Edit and add your API key
+nano .env
 ```
 
-Your `.env` file should look like:
-```
-NEWS_API_KEY=abc123xyz789youractualkey
-MAX_ARTICLES_PER_STOCK=20
-DAYS_BACK=7
+`.env` file:
+```bash
+NEWS_API_KEY=your_api_key_here
 LOG_LEVEL=INFO
 ```
 
----
+**Note**: NewsAPI key only needed for News Agent. Report Agent works without any keys.
 
-### Step 4: Run the Test
+Get free API key: [newsapi.org/register](https://newsapi.org/register)
+
+### 3. Run
 
 ```bash
 python main.py
 ```
 
-You'll be prompted to choose which agents to run:
+Choose agents when prompted:
 ```
-==============================================================
- EVENT HORIZON - MULTI-AGENT SYSTEM TEST
-==============================================================
-
-Test Portfolio:
-  ID: test_001
-  Securities: AAPL, TSLA, SPY, QQQ
-  Mix: Stocks (AAPL, TSLA) + ETFs (SPY, QQQ)
-
-==============================================================
 Select agents to execute:
   1. News Agent only
   2. Report Agent only
   3. Both agents (recommended)
-==============================================================
 
 Enter choice (1-3) [default: 3]:
 ```
 
-**Recommended**: Press Enter to run both agents (option 3).
+### 4. Check Results
 
-**Note**: The Report Agent works without any API keys! It uses yfinance to fetch data from Yahoo Finance. The News Agent requires a NewsAPI.org key.
-
----
-
-### Step 5: Check the Results
-
-After execution completes:
-
-1. **Console Output**: See formatted summary in terminal
-2. **JSON Files**:
-   - `news_results.json` - News articles for each security
-   - `report_results.json` - Earnings/fund reports for each security
-3. **Log File**: Detailed execution logs in `event_horizon_[timestamp].log`
+Results saved to:
+- `news_results.json` - News articles
+- `report_results.json` - Earnings/fund reports
+- `event_horizon_[timestamp].log` - Execution logs
 
 ---
 
-## 📊 Understanding the Output
+## Output Examples
 
-### News Agent Console Output:
-
-- **Execution Summary**: Status, timing, article counts
-- **Articles by Symbol**: Top 3 articles per stock with:
-  - Title
-  - Source
-  - Publication date
-  - URL
-  - Description
-- **Errors**: Any issues encountered
-
-### Report Agent Console Output:
-
-- **Execution Summary**: Status, timing, report counts
-- **Securities by Type**: Count of stocks, ETFs, mutual funds
-- **Reports by Symbol**:
-  - **Stocks**: Earnings data, upcoming earnings dates, key metrics, financials
-  - **ETFs**: Fund info, holdings, performance, distributions
-- **Errors**: Any issues encountered
-
-### News Agent JSON File Contains:
+### News Agent Output
 
 ```json
 {
-  "execution_id": "uuid",
-  "status": "success",
-  "result": {
-    "portfolio_id": "test_001",
-    "news_by_stock": {
-      "AAPL": [
-        {
-          "title": "Apple announces...",
-          "source": "TechCrunch",
-          "url": "https://...",
-          "published_at": "2024-01-15T10:30:00Z",
-          "description": "...",
-          ...
-        }
-      ],
-      ...
-    },
-    "total_articles": 35,
-    ...
-  }
-}
-```
-
-### Report Agent JSON File Contains:
-
-```json
-{
-  "execution_id": "uuid",
-  "status": "success",
-  "result": {
-    "portfolio_id": "test_001",
-    "reports_by_symbol": {
-      "AAPL": {
-        "symbol": "AAPL",
-        "security_type": "stock",
-        "name": "Apple Inc.",
-        "reports": {
-          "earnings": {
-            "quarterly": [...],
-            "annual": [...]
-          },
-          "calendar": {
-            "earnings_date": "2024-01-25",
-            "earnings_estimate": 2.10
-          },
-          "metrics": {
-            "market_cap": 3000000000000,
-            "pe_ratio": 28.5,
-            "dividend_yield": 0.0045
-          },
-          "financials": {...}
-        }
-      },
-      "SPY": {
-        "symbol": "SPY",
-        "security_type": "etf",
-        "name": "SPDR S&P 500 ETF Trust",
-        "reports": {
-          "fund_info": {
-            "category": "Large Blend",
-            "total_assets": 450000000000,
-            "expense_ratio": 0.0945,
-            "yield": 0.0145
-          },
-          "performance": {...},
-          "distributions": [...]
-        }
+  "portfolio_id": "test_001",
+  "news_by_stock": {
+    "AAPL": [
+      {
+        "title": "Apple announces new product...",
+        "source": "TechCrunch",
+        "url": "https://...",
+        "published_at": "2024-01-15T10:30:00Z",
+        "description": "..."
       }
-    },
-    "securities_by_type": {
-      "stock": 2,
-      "etf": 2
-    },
-    "total_reports": 4
+    ]
+  },
+  "total_articles": 35
+}
+```
+
+### Report Agent Output
+
+**For Stocks:**
+```json
+{
+  "AAPL": {
+    "symbol": "AAPL",
+    "security_type": "stock",
+    "name": "Apple Inc.",
+    "reports": {
+      "earnings": {
+        "quarterly": [...],
+        "annual": [...]
+      },
+      "calendar": {
+        "earnings_date": "2024-01-25"
+      },
+      "metrics": {
+        "market_cap": 3000000000000,
+        "pe_ratio": 28.5
+      },
+      "financials": {...}
+    }
+  }
+}
+```
+
+**For ETFs:**
+```json
+{
+  "SPY": {
+    "symbol": "SPY",
+    "security_type": "etf",
+    "name": "SPDR S&P 500 ETF Trust",
+    "reports": {
+      "fund_info": {
+        "category": "Large Blend",
+        "total_assets": 450000000000,
+        "expense_ratio": 0.0945
+      },
+      "holdings": [...],
+      "performance": {...}
+    }
   }
 }
 ```
 
 ---
 
-## 🎯 Try Different Portfolios
+## Custom Portfolios
 
 Edit `main.py` to test different securities:
 
 ```python
 test_portfolio = {
-    "portfolio_id": "my_tech_portfolio",
+    "portfolio_id": "my_portfolio",
     "user_id": "user_demo",
-    "portfolio": ["NVDA", "AMD", "INTC", "VGT", "QQQ"]  # Mix of stocks and ETFs
+    "portfolio": ["NVDA", "AMD", "VGT", "QQQ"]
 }
 ```
 
-**Supported symbols**:
-- **Stocks**: AAPL, TSLA, GOOGL, MSFT, AMZN, META, NVDA, AMD, INTC, CRM, ORCL, IBM, DIS, BA, GE, JPM, BAC, WMT, and more!
-- **ETFs**: SPY, QQQ, VOO, VTI, IWM, DIA, VGT, XLF, XLE, and thousands more!
+**Supported:**
+- **Stocks**: AAPL, TSLA, GOOGL, MSFT, AMZN, META, NVDA, AMD, etc.
+- **ETFs**: SPY, QQQ, VOO, VTI, IWM, DIA, VGT, XLF, etc.
 
 ---
 
-## ⚙️ Configuration Options
+## Configuration
 
-Adjust in `main.py`:
+### News Agent Config
 
-### News Agent Config:
 ```python
 news_config = {
-    "max_articles_per_stock": 10,  # Articles per stock (1-100)
-    "days_back": 7,                # How far back to search (1-30)
-    "language": "en"               # News language
+    "max_articles_per_stock": 10,  # 1-100
+    "days_back": 7,                # 1-30
+    "language": "en"
 }
 ```
 
-### Report Agent Config:
+### Report Agent Config
+
 ```python
 report_config = {
-    "include_financials": True,    # Include full financial statements
-    "earnings_periods": 4,         # Number of quarters to retrieve
-    "top_holdings": 10            # Top N holdings for ETFs
+    "include_financials": True,
+    "earnings_periods": 4,         # Number of quarters
+    "top_holdings": 10             # Top N for ETFs
 }
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### News Agent Issues
+### News Agent
 
-#### "NEWS_API_KEY not found"
-- Make sure `.env` file exists in project root
-- Check API key is correct (no quotes needed)
+**"NEWS_API_KEY not found"**
+- Ensure `.env` exists in project root
+- Verify no typos in API key
 - Restart terminal after creating `.env`
-- **Note**: You can still run Report Agent without this key!
+- Skip News Agent and use Report Agent only
 
-#### "Invalid API key" (401 error)
-- Verify your API key on NewsAPI.org dashboard
-- Check for typos or extra spaces
-
-#### "Rate limit reached"
+**"Rate limit reached"**
 - Free tier: 100 requests/day
+- Reduce `max_articles_per_stock`
 - Wait 24 hours or upgrade plan
-- Reduce `max_articles_per_stock` to conserve requests
 
-#### No articles returned for stock
-- Company name might not match search
-- Try adding company to `SYMBOL_TO_COMPANY` dict in `services/news_api_client.py`
-- Check if stock symbol is correct
+**No articles returned**
+- Add company to `SYMBOL_TO_COMPANY` in `services/news_api_client.py`
+- Verify stock symbol is correct
 
-### Report Agent Issues
+### Report Agent
 
-#### "Symbol not found or no data available"
-- Verify stock/ETF symbol is correct
-- Some delisted or very small cap stocks may not have data
-- Check symbol on finance.yahoo.com
+**"Symbol not found"**
+- Verify symbol on finance.yahoo.com
+- Delisted or small cap stocks may lack data
 
-#### Empty earnings data
-- Some stocks don't report earnings publicly
-- Newly listed companies may not have historical data
-- Foreign stocks may have limited data
+**Empty earnings data**
+- Some stocks don't report publicly
+- New listings may lack historical data
 
-#### yfinance connection issues
+**Connection issues**
 - Check internet connection
-- Yahoo Finance may be temporarily unavailable
-- Try again in a few minutes
+- Yahoo Finance may be temporarily down
 
-### General Issues
+### General
 
-#### Import errors
-- Ensure you're in virtual environment
-- Run `pip install -r requirements.txt` again
+**Import errors**
+- Activate virtual environment
+- Run `pip install -r requirements.txt`
 - Check Python version: `python --version` (need 3.8+)
 
-#### "ModuleNotFoundError: No module named 'yfinance'"
-- Activate your virtual environment
-- Run `pip install yfinance`
-
 ---
 
-## 📚 Next Steps
+## Docker Usage
 
-### Phase 2 Enhancements:
+For Docker deployment:
 
-1. **Add Sentiment Analysis**
-   - Install: `pip install transformers torch`
-   - Integrate FinBERT for financial sentiment
-
-2. **Add Database Storage**
-   - Install: `pip install sqlalchemy`
-   - Store articles for historical tracking
-
-3. **Add Parallel Processing**
-   - Install: `pip install aiohttp`
-   - Fetch news for all stocks simultaneously
-
-4. **Create More Agents**
-   - Financial Summary Agent
-   - Technical Analysis Agent
-   - Balance Sheet Agent
-
-### Integration Options:
-
-- **Web API**: Use FastAPI to create REST endpoints
-- **Dashboard**: Build with Streamlit for visualization
-- **Scheduling**: Use Celery for automated updates
-- **Database**: PostgreSQL for production storage
-
----
-
-## 📖 Documentation
-
-- **Agent Design Docs**:
-  - `docs/news-agent-design.md` - News Agent architecture
-  - `docs/report-agent-design.md` - Report Agent architecture
-- **Architecture Resources**:
-  - `Event-Horizon AI/20-agentic-design-patterns.md` - Agentic design patterns
-  - `Event-Horizon AI/multiagent-refs.md` - Multi-agent systems guide
-- **Implementation**:
-  - `agents/base_agent.py` - Base agent class
-  - `services/news_api_client.py` - News API client
-  - `services/financial_data_client.py` - Financial data client
-
----
-
-## 💡 Tips
-
-1. **Start Small**: Test with 2-3 securities first
-2. **Mix Security Types**: Try combinations of stocks and ETFs
-3. **Check Logs**: Detailed info in log files
-4. **Rate Limits (News Agent)**: Free tier = 100 requests/day, plan accordingly
-5. **No Rate Limits (Report Agent)**: yfinance is free and unlimited!
-6. **Company Names**: Add more to `SYMBOL_TO_COMPANY` for better news results
-7. **Save Results**: JSON files useful for analysis and debugging
-8. **Parallel Processing**: Both agents can run independently
-
----
-
-## 🎉 Success Checklist
-
-- [✓] Python 3.8+ installed
-- [✓] Dependencies installed (`pip install -r requirements.txt`)
-- [✓] `python main.py` runs successfully
-- [✓] Report Agent retrieves earnings and fund data
-- [✓] JSON results files created
-- [✓] Both agents work with test portfolio
-- [ ] (Optional) NewsAPI.org account created
-- [ ] (Optional) API key added to `.env` for News Agent
-
----
-
-## 🆘 Need Help?
-
-Check the comprehensive design document:
 ```bash
-cat docs/news-agent-design.md
+# Build
+docker build -t event-horizon:latest .
+
+# Run
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/results:/app/results \
+  event-horizon:latest
 ```
 
-Or review the implementation:
-```bash
-# View agent code
-cat agents/news_agent.py
+See **[DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md)** for details.
 
-# View API client
-cat services/news_api_client.py
+---
+
+## Next Steps
+
+### Add More Agents
+- Sentiment Analysis Agent
+- Technical Analysis Agent
+- Risk Assessment Agent
+
+### Integration
+- **Web API**: FastAPI/Flask REST endpoints
+- **Dashboard**: Streamlit visualization
+- **Scheduling**: Celery for automation
+- **Database**: PostgreSQL for storage
+
+### Enhancements
+- Parallel processing with aiohttp
+- Database persistence with SQLAlchemy
+- FinBERT sentiment analysis
+- Multi-agent orchestration
+
+---
+
+## Documentation
+
+- `docs/news-agent-design.md` - News Agent architecture
+- `docs/report-agent-design.md` - Report Agent architecture
+- `docs/multi-agent-architecture.md` - Multi-agent patterns
+- `CONFIG_README.md` - Configuration system
+- `DEPLOYMENT.md` - Production deployment
+- `DOCKER_QUICKSTART.md` - Docker local setup
+
+---
+
+## Success Checklist
+
+- ✅ Python 3.8+ installed
+- ✅ Dependencies installed
+- ✅ `python main.py` runs successfully
+- ✅ Report Agent retrieves data
+- ✅ JSON results created
+- ⬜ (Optional) NewsAPI key configured
+- ⬜ (Optional) Custom portfolio tested
+
+---
+
+## Tips
+
+1. **Start small**: Test with 2-3 securities first
+2. **Mix types**: Combine stocks and ETFs
+3. **Check logs**: Detailed execution info in log files
+4. **No API key needed**: Report Agent is fully functional without keys
+5. **Rate limits**: News Agent free tier = 100 requests/day
+6. **Save results**: JSON files useful for analysis
+
+---
+
+## Quick Reference
+
+```bash
+# Setup
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+
+# Run
+python main.py
+
+# Docker
+docker build -t event-horizon:latest .
+docker-compose -f docker-compose.dev.yml up
+
+# Check results
+ls results/
+cat results/report_results.json
 ```
 
 ---
 
-**Happy Coding! 🚀**
-
-You've successfully set up your Event Horizon multi-agent system with:
-- ✅ **News Agent** - Financial news retrieval
-- ✅ **Report Agent** - Earnings and fund reports
-- ✅ **Base Agent Architecture** - Ready for more agents
-
-This is the foundation for building a complete multi-agent investment analysis platform.
-
-**Next Steps**:
-- Build more specialized agents (sentiment analysis, technical analysis, etc.)
-- Create multi-agent orchestration layer
-- Add caching and parallel processing
-- Integrate with portfolio management system
+**Ready to build?** This foundation supports adding more specialized agents and creating a complete multi-agent investment analysis platform.
