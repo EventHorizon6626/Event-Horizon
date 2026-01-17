@@ -25,11 +25,11 @@ LOG_LEVEL=INFO
 ### 2. Build and Start
 
 ```bash
-# Stop any running systemd service first
-sudo systemctl stop event-horizon-ai
+# Stop any running systemd service first (if applicable)
+sudo systemctl stop event-horizon-ai 2>/dev/null || true
 
 # Build and start with Docker
-docker-compose -f docker-compose.localhost.yml up -d --build
+docker-compose up -d --build
 ```
 
 ### 3. Verify
@@ -70,16 +70,16 @@ curl http://178.18.255.19:5000/health
 
 ```bash
 # Start
-docker-compose -f docker-compose.localhost.yml up -d
+docker-compose up -d
 
 # Stop
-docker-compose -f docker-compose.localhost.yml down
+docker-compose down
 
 # Restart
-docker-compose -f docker-compose.localhost.yml restart
+docker-compose restart
 
 # Stop and remove volumes (clean slate)
-docker-compose -f docker-compose.localhost.yml down -v
+docker-compose down -v
 ```
 
 ### Logs
@@ -116,7 +116,7 @@ cd ~/EventHorizon/Event-Horizon-AI
 git pull origin main
 
 # Rebuild and restart
-docker-compose -f docker-compose.localhost.yml up -d --build
+docker-compose up -d --build
 ```
 
 ---
@@ -136,7 +136,7 @@ git push origin main
 ```bash
 cd ~/EventHorizon/Event-Horizon-AI
 git pull origin main
-docker-compose -f docker-compose.localhost.yml up -d --build
+docker-compose up -d --build
 ```
 
 ---
@@ -168,7 +168,7 @@ docker logs event-horizon-ai
 sudo lsof -i :5000
 
 # Remove old container
-docker-compose -f docker-compose.localhost.yml down
+docker-compose down
 docker rm -f event-horizon-ai
 ```
 
@@ -176,20 +176,20 @@ docker rm -f event-horizon-ai
 
 ```bash
 # Stop systemd service if running
-sudo systemctl stop event-horizon-ai
-sudo systemctl disable event-horizon-ai
+sudo systemctl stop event-horizon-ai 2>/dev/null || true
+sudo systemctl disable event-horizon-ai 2>/dev/null || true
 
 # Then start Docker
-docker-compose -f docker-compose.localhost.yml up -d
+docker-compose up -d
 ```
 
 ### Build fails
 
 ```bash
 # Clean rebuild
-docker-compose -f docker-compose.localhost.yml down
+docker-compose down
 docker system prune -f
-docker-compose -f docker-compose.localhost.yml up -d --build --force-recreate
+docker-compose up -d --build --force-recreate
 ```
 
 ### Can't connect to API
@@ -234,10 +234,10 @@ docker run -d -p 9443:9443 --name portainer \
 
 ```bash
 # Stop and remove containers
-docker-compose -f docker-compose.localhost.yml down
+docker-compose down
 
 # Remove volumes
-docker-compose -f docker-compose.localhost.yml down -v
+docker-compose down -v
 
 # Remove images
 docker rmi event-horizon-ai
@@ -268,19 +268,19 @@ docker system prune -a
 
 ```bash
 # Start
-docker-compose -f docker-compose.localhost.yml up -d
+docker-compose up -d
 
 # Logs
 docker logs -f event-horizon-ai
 
 # Restart
-docker-compose -f docker-compose.localhost.yml restart
+docker-compose restart
 
 # Stop
-docker-compose -f docker-compose.localhost.yml down
+docker-compose down
 
 # Update
-git pull && docker-compose -f docker-compose.localhost.yml up -d --build
+git pull && docker-compose up -d --build
 
 # Test
 curl http://localhost:5000/health
