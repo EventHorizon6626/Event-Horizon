@@ -114,10 +114,7 @@ async def analyze_portfolio(request: PortfolioAnalysisRequest):
         # Execute NewsAgent if enabled
         if ENABLE_NEWS_AGENT:
             logger.info("Executing NewsAgent...")
-            news_agent = NewsAgent(
-                name="NewsAgent",
-                description="Fetches financial news for portfolio stocks"
-            )
+            news_agent = NewsAgent()
             news_result = news_agent.execute(symbols=request.stocks)
         else:
             logger.info("NewsAgent is disabled - skipping")
@@ -125,10 +122,7 @@ async def analyze_portfolio(request: PortfolioAnalysisRequest):
         # Execute ReportAgent if enabled
         if ENABLE_REPORT_AGENT:
             logger.info("Executing ReportAnalysisAgent...")
-            report_agent = ReportAnalysisAgent(
-                name="ReportAnalysisAgent",
-                description="Analyzes financial reports and metrics"
-            )
+            report_agent = ReportAnalysisAgent()
             report_result = report_agent.execute(symbols=request.stocks)
         else:
             logger.info("ReportAgent is disabled - skipping")
@@ -176,11 +170,13 @@ async def get_news(request: PortfolioAnalysisRequest):
     try:
         logger.info(f"Fetching news for stocks: {request.stocks}")
 
-        news_agent = NewsAgent(
-            name="NewsAgent",
-            description="Fetches financial news"
-        )
+        if not ENABLE_NEWS_AGENT:
+            raise HTTPException(
+                status_code=503,
+                detail="NewsAgent is disabled. Enable it by setting ENABLE_NEWS_AGENT=true in .env"
+            )
 
+        news_agent = NewsAgent()
         result = news_agent.execute(symbols=request.stocks)
 
         if not result.get("success"):
@@ -205,11 +201,13 @@ async def get_reports(request: PortfolioAnalysisRequest):
     try:
         logger.info(f"Fetching reports for stocks: {request.stocks}")
 
-        report_agent = ReportAnalysisAgent(
-            name="ReportAnalysisAgent",
-            description="Fetches financial reports"
-        )
+        if not ENABLE_REPORT_AGENT:
+            raise HTTPException(
+                status_code=503,
+                detail="ReportAgent is disabled. Enable it by setting ENABLE_REPORT_AGENT=true in .env"
+            )
 
+        report_agent = ReportAnalysisAgent()
         result = report_agent.execute(symbols=request.stocks)
 
         if not result.get("success"):
