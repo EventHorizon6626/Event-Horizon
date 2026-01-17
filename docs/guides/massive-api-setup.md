@@ -112,8 +112,10 @@ Expected response:
 Massive.com uses Polygon.io-style endpoints:
 
 ```
-GET /v3/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{from}/{to}
+GET /v2/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{from}/{to}
 ```
+
+**Base URL:** `https://api.massive.com`
 
 **Parameters:**
 - `symbol`: Stock ticker (e.g., AAPL)
@@ -124,7 +126,7 @@ GET /v3/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{from}/{to}
 
 **Example:**
 ```
-/v3/aggs/ticker/AAPL/range/1/day/2024-11-01/2024-12-01
+https://api.massive.com/v2/aggs/ticker/AAPL/range/1/day/2024-11-01/2024-12-01?apiKey=YOUR_KEY
 ```
 
 ---
