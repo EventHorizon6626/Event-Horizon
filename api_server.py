@@ -115,7 +115,7 @@ async def analyze_portfolio(request: PortfolioAnalysisRequest):
         if ENABLE_NEWS_AGENT:
             logger.info("Executing NewsAgent...")
             news_agent = NewsAgent()
-            news_result = news_agent.execute(symbols=request.stocks)
+            news_result = news_agent.execute(request.stocks)
         else:
             logger.info("NewsAgent is disabled - skipping")
 
@@ -123,7 +123,7 @@ async def analyze_portfolio(request: PortfolioAnalysisRequest):
         if ENABLE_REPORT_AGENT:
             logger.info("Executing ReportAnalysisAgent...")
             report_agent = ReportAnalysisAgent()
-            report_result = report_agent.execute(symbols=request.stocks)
+            report_result = report_agent.execute(request.stocks)
         else:
             logger.info("ReportAgent is disabled - skipping")
 
@@ -177,7 +177,7 @@ async def get_news(request: PortfolioAnalysisRequest):
             )
 
         news_agent = NewsAgent()
-        result = news_agent.execute(symbols=request.stocks)
+        result = news_agent.execute(request.stocks)
 
         if not result.get("success"):
             raise HTTPException(
@@ -208,7 +208,7 @@ async def get_reports(request: PortfolioAnalysisRequest):
             )
 
         report_agent = ReportAnalysisAgent()
-        result = report_agent.execute(symbols=request.stocks)
+        result = report_agent.execute(request.stocks)
 
         if not result.get("success"):
             raise HTTPException(
