@@ -6,6 +6,8 @@ from datetime import datetime
 
 from agents.base_agent import BaseAgent
 from services.chart_data_client import ChartDataClient
+from services.massive_chart_client import MassiveChartClient
+import os
 
 
 class ChartDataAgent(BaseAgent):
@@ -22,8 +24,17 @@ class ChartDataAgent(BaseAgent):
         """
         super().__init__("chart_agent", config)
 
-        # Initialize Chart Data client
-        self.chart_client = ChartDataClient()
+        # Determine which chart client to use
+        use_massive = os.getenv("USE_MASSIVE_API", "false").lower() == "true"
+
+        if use_massive:
+            self.logger.info("Using Massive.com API for chart data")
+            self.chart_client = MassiveChartClient()
+            self.data_source = "massive.com"
+        else:
+            self.logger.info("Using Yahoo Finance for chart data")
+            self.chart_client = ChartDataClient()
+            self.data_source = "yahoo_finance"
 
         # Configuration
         self.period = self.get_config("period", "1mo")  # Default: 1 month
