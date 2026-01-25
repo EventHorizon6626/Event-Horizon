@@ -8,12 +8,14 @@ Implements the data collection pipeline for heterogeneous data sources.
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 
 from layer_1.agents.candlestick_agent import CandlestickAgent
 from layer_1.agents.earnings_agent import EarningsAgent
 from layer_1.agents.news_agent import NewsAgent
+from layer_1.agents.technical_agent import TechnicalAgent
+from layer_1.agents.fundamentals_agent import FundamentalsAgent
 from layer_1.models.schemas import Layer1Output
 
 
@@ -48,7 +50,7 @@ class Layer1Orchestrator:
 
         # Determine which agents to enable
         self.enabled_agents = self.config.get(
-            "enabled_agents", ["candlestick", "earnings", "news"]
+            "enabled_agents", ["candlestick", "earnings", "news", "technical", "fundamentals"]
         )
 
         # Max parallel workers
@@ -64,7 +66,7 @@ class Layer1Orchestrator:
         )
 
     def execute(
-        self, portfolio: Dict[str, Any] | List[str]
+        self, portfolio: Union[Dict[str, Any], List[str]]
     ) -> Dict[str, Any]:
         """
         Execute Layer 1 data retrieval for a portfolio
@@ -146,6 +148,20 @@ class Layer1Orchestrator:
                 if result.get("errors"):
                     all_errors.extend(
                         [{"agent": "news", **err} for err in result["errors"]]
+                    )
+
+            elif agent_name == "technical":
+                layer1_output.technical_data = result.get("technical_data_by_symbol", {})
+                if result.get("errors"):
+                    all_errors.extend(
+                        [{"agent": "technical", **err} for err in result["errors"]]
+                    )
+
+            elif agent_name == "fundamentals":
+                layer1_output.fundamentals_data = result.get("fundamentals_data_by_symbol", {})
+                if result.get("errors"):
+                    all_errors.extend(
+                        [{"agent": "fundamentals", **err} for err in result["errors"]]
                     )
 
         # Update metadata
@@ -236,6 +252,10 @@ class Layer1Orchestrator:
                 agent = EarningsAgent(config=agent_config)
             elif agent_name == "news":
                 agent = NewsAgent(config=agent_config)
+            elif agent_name == "technical":
+                agent = TechnicalAgent(config=agent_config)
+            elif agent_name == "fundamentals":
+                agent = FundamentalsAgent(config=agent_config)
             else:
                 raise ValueError(f"Unknown agent: {agent_name}")
 
@@ -255,7 +275,7 @@ class Layer1Orchestrator:
 
     def set_enabled_agents(self, agents: List[str]):
         """Set which agents to enable"""
-        valid_agents = ["candlestick", "earnings", "news"]
+        valid_agents = ["candlestick", "earnings", "news", "technical", "fundamentals"]
         invalid = [a for a in agents if a not in valid_agents]
         if invalid:
             raise ValueError(f"Invalid agents: {invalid}. Valid: {valid_agents}")

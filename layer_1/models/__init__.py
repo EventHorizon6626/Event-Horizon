@@ -11,6 +11,8 @@ from layer_1.models.schemas import (
     OptionsFlowData,
     SocialMediaData,
     SECFilingsData,
+    TechnicalData,
+    FundamentalsData,
 )
 
 __all__ = [
@@ -21,4 +23,6 @@ __all__ = [
     "OptionsFlowData",
     "SocialMediaData",
     "SECFilingsData",
+    "TechnicalData",
+    "FundamentalsData",
 ]
