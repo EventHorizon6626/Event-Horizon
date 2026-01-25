@@ -68,7 +68,7 @@ The full Tauric codebase is now available as a reference implementation in `core
 
 #### New Files Created:
 1. `layer_1/TAURIC_INTEGRATION.md` - Details of Layer 1 integration
-2. `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md` - Separate doc for financial analysis multi-agent system (future)
+2. `docs/architecture/multi-agent-architecture.md` - Unified multi-agent architecture (data processing + financial analysis system)
 
 #### Renamed Files:
 - `docs/architecture/multi-agent-design.md` → `docs/architecture/multi-agent-design-data-processor.md`
@@ -226,7 +226,7 @@ print(layer1_output.fundamentals_data) # Fundamental metrics ← NEW
 3. `layer_1/agents/utils/__init__.py`
 4. `layer_1/agents/utils/stock_tools.py`
 5. `layer_1/TAURIC_INTEGRATION.md`
-6. `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md`
+6. `docs/architecture/multi-agent-architecture.md`
 7. `LAYER1_UPDATE_SUMMARY.md` (this file)
 
 ### Modified Files (7 files)
@@ -284,8 +284,7 @@ print(layer1_output.fundamentals_data) # Fundamental metrics ← NEW
 ## Reference Documentation
 
 - **Tauric Integration**: `layer_1/TAURIC_INTEGRATION.md`
-- **Data Processor Architecture**: `docs/architecture/multi-agent-design-data-processor.md`
-- **Financial Analysis System**: `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md`
+- **Multi-Agent Architecture**: `docs/architecture/multi-agent-architecture.md`
 - **Layer 1 Quick Start**: `QUICKSTART_LAYER1.md`
 - **Tauric Repository**: `core_refs/TradingAgents/`
 - **Tauric Paper**: https://arxiv.org/abs/2412.20138

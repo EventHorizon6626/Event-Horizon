@@ -58,9 +58,8 @@ layer_1/
 
 **Created New Docs**:
 1. `layer_1/TAURIC_INTEGRATION.md` - Tauric integration details
-2. `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md` - Future financial analysis system
-3. `docs/architecture/layer-1-data-processor.md` - Combined comprehensive Layer 1 docs
-4. `LAYER1_UPDATE_SUMMARY.md` - Initial update summary
+2. `docs/architecture/multi-agent-architecture.md` - Unified multi-agent architecture
+3. `LAYER1_UPDATE_SUMMARY.md` - Initial update summary
 5. `REFACTOR_SUMMARY.md` - This document
 
 **Renamed**:
@@ -131,9 +130,8 @@ Created comprehensive demo script showcasing:
 
 **Documentation**:
 11. `layer_1/TAURIC_INTEGRATION.md`
-12. `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md`
-13. `docs/architecture/layer-1-data-processor.md`
-14. `LAYER1_UPDATE_SUMMARY.md`
+12. `docs/architecture/multi-agent-architecture.md`
+13. `LAYER1_UPDATE_SUMMARY.md`
 15. `REFACTOR_SUMMARY.md` (this file)
 
 ### Modified Files (12 files)
@@ -345,9 +343,8 @@ python main_layer1.py
 ### 4. Why Not Merge All Docs into One?
 
 **Reason**: Clarity and maintainability
-- `layer-1-data-processor.md`: Layer 1 implementation
-- `multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md`: Future system design
-- Each doc has specific focus and audience
+- `multi-agent-architecture.md`: Unified architecture covering data processing (Layers 1-3) and financial analysis system
+- Single source of truth for all multi-agent components
 
 ---
 
@@ -369,9 +366,8 @@ python main_layer1.py
 
 **Documentation**:
 - [Quick Start](QUICKSTART_LAYER1.md)
-- [Layer 1 Architecture](docs/architecture/layer-1-data-processor.md)
+- [Multi-Agent Architecture](docs/architecture/multi-agent-architecture.md)
 - [Tauric Integration](layer_1/TAURIC_INTEGRATION.md)
-- [Financial Analysis System](docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md)
 - [Initial Update Summary](LAYER1_UPDATE_SUMMARY.md)
 
 **External**:

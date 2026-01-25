@@ -6,7 +6,7 @@ This document describes the integration of **data retrieval patterns** from Taur
 
 Event Horizon Layer 1 has been enhanced with **data tools** inspired by the [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) framework.
 
-**Important**: Layer 1 is **ONLY** for data retrieval (market data, news, fundamentals, technicals, etc.). The Tauric analyst/researcher/trader/risk management multi-agent system will be implemented separately as described in `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md`.
+**Important**: Layer 1 is **ONLY** for data retrieval (market data, news, fundamentals, technicals, etc.). The Tauric analyst/researcher/trader/risk management multi-agent system will be implemented separately as described in `docs/architecture/multi-agent-architecture.md`.
 
 ## What Was Added
 
@@ -160,7 +160,7 @@ The following Tauric components are **NOT** part of Layer 1 and will be implemen
 - ❌ LangGraph workflow orchestration
 - ❌ Multi-agent debate and consensus mechanisms
 
-These will be built as a **separate system** that consumes the output from Layer 3 (feature-extracted data). See `docs/architecture/multi-agent-design-for-analyzer-researcher-trader-riskmgmt.md` for details.
+These will be built as a **separate system** that consumes the output from Layer 3 (feature-extracted data). See `docs/architecture/multi-agent-architecture.md` for details.
 
 ### Clear Separation
 
