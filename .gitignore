@@ -45,5 +45,9 @@ logs/
 results/
 data/
 
+# Stage 1 outputs
+stage1_output_*.json
+stage1_*.log
+
 # Docker
 docker-compose.override.yml
