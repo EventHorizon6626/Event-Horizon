@@ -11,7 +11,7 @@ uvicorn[standard]==0.27.0
 newsapi-python==0.2.7
 
 # Financial Data APIs
-yfinance==0.2.36
+yfinance>=1.1.0
 
 # Utilities
 tenacity==8.2.3
