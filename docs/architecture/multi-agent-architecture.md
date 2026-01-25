@@ -1,31 +1,54 @@
 # Event Horizon - Multi-Agent Architecture
 
-**Status**: Layer 1 ✅ Implemented | Layers 2-3 & Financial Analysis ⏳ Planned
+**Status**: Data Pipeline Stage 1 ✅ Implemented | Data Pipeline Stages 2-3 & Decision System ⏳ Planned
 **Last Updated**: 2026-01-25
 
-Complete multi-agent architecture for Event Horizon, covering data processing (Layers 1-3) and financial analysis agents (decision-making system).
+Complete multi-agent architecture for Event Horizon, consisting of:
+- **Data Processing Pipeline** (3 stages): Raw data → Normalized data → Feature vectors
+- **Decision-Making System** (4 teams): Analysis → Research → Risk Management → Trading
 
 ---
 
 ## Table of Contents
 
 1. [System Overview](#system-overview)
-2. [Layer 1: Data Retrieval](#layer-1-data-retrieval)
-3. [Layer 2: Normalization](#layer-2-normalization)
-4. [Layer 3: Feature Extraction](#layer-3-feature-extraction)
-5. [Financial Analysis System](#financial-analysis-system)
-6. [Workflow & Communication](#workflow--communication)
-7. [Implementation Status](#implementation-status)
+2. [Data Processing Pipeline](#data-processing-pipeline)
+   - [Stage 1: Data Retrieval](#stage-1-data-retrieval)
+   - [Stage 2: Normalization](#stage-2-normalization)
+   - [Stage 3: Feature Extraction](#stage-3-feature-extraction)
+3. [Decision-Making System](#decision-making-system)
+   - [Team 1: Analyst Team](#team-1-analyst-team)
+   - [Team 2: Researcher Team](#team-2-researcher-team)
+   - [Team 3: Risk Management Team](#team-3-risk-management-team)
+   - [Team 4: Trader Agent](#team-4-trader-agent)
+4. [Workflow & Communication](#workflow--communication)
+5. [Implementation Status](#implementation-status)
 
 ---
 
 ## System Overview
 
+Event Horizon uses **two separate multi-agent systems** that work together:
+
+### System 1: Data Processing Pipeline
+**Purpose**: Transform raw market data into feature vectors
+**Stages**: 3 (Data Retrieval → Normalization → Feature Extraction)
+**Status**: Stage 1 ✅ Implemented, Stages 2-3 ⏳ Planned
+
+### System 2: Decision-Making System
+**Purpose**: Make intelligent trading decisions from feature vectors
+**Teams**: 4 (Analyst → Researcher → Risk Management → Trader)
+**Status**: ⏳ Planned
+
 ### Complete Architecture
 
 ```
+╔═════════════════════════════════════════════════════════════════════════╗
+║                   SYSTEM 1: DATA PROCESSING PIPELINE                    ║
+╚═════════════════════════════════════════════════════════════════════════╝
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    LAYER 1: DATA RETRIEVAL ✅                            │
+│                   STAGE 1: DATA RETRIEVAL ✅                             │
 │                  (Heterogeneous Data Collection)                        │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  5 Agents Running in Parallel:                                         │
@@ -39,7 +62,7 @@ Complete multi-agent architecture for Event Horizon, covering data processing (L
 └─────────────────────────────────────────────────────────────────────────┘
                                 ↓
 ┌─────────────────────────────────────────────────────────────────────────┐
-│              LAYER 2: NORMALIZATION & STANDARDIZATION ⏳                 │
+│             STAGE 2: NORMALIZATION & STANDARDIZATION ⏳                  │
 │                  (Create Unified "DNA" Dataset)                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  • Time synchronization across data sources                            │
@@ -50,7 +73,7 @@ Complete multi-agent architecture for Event Horizon, covering data processing (L
 └─────────────────────────────────────────────────────────────────────────┘
                                 ↓
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                  LAYER 3: FEATURE EXTRACTION ⏳                          │
+│                  STAGE 3: FEATURE EXTRACTION ⏳                          │
 │          (LLM/Neural AI - Intelligent Feature Discovery)                │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  • Extract non-obvious patterns from normalized data                   │
@@ -60,61 +83,85 @@ Complete multi-agent architecture for Event Horizon, covering data processing (L
 │  Output: Feature vectors ready for trading decisions                   │
 └─────────────────────────────────────────────────────────────────────────┘
                                 ↓
+╔═════════════════════════════════════════════════════════════════════════╗
+║                   SYSTEM 2: DECISION-MAKING SYSTEM                      ║
+╚═════════════════════════════════════════════════════════════════════════╝
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│              FINANCIAL ANALYSIS MULTI-AGENT SYSTEM ⏳                    │
-│        (Analyst → Researcher → Risk Mgmt → Trader)                      │
+│                        TEAM 1: ANALYST TEAM ⏳                           │
+│                    (Parallel Multi-Perspective Analysis)                │
 ├─────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
+│  │ Fundamentals │  │    Market    │  │     News     │                 │
+│  │   Analyst    │  │   Analyst    │  │   Analyst    │                 │
+│  └──────────────┘  └──────────────┘  └──────────────┘                 │
+│  ┌──────────────┐                                                      │
+│  │ Social Media │                                                      │
+│  │   Analyst    │                                                      │
+│  └──────────────┘                                                      │
 │                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                      ANALYST TEAM                                │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │  │
-│  │  │ Fundamentals │  │    Market    │  │     News     │          │  │
-│  │  │   Analyst    │  │   Analyst    │  │   Analyst    │          │  │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘          │  │
-│  │  ┌──────────────┐                                               │  │
-│  │  │ Social Media │                                               │  │
-│  │  │   Analyst    │                                               │  │
-│  │  └──────────────┘                                               │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                              ↓                                          │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                    RESEARCHER TEAM                               │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │  │
-│  │  │     Bull     │  │     Bear     │  │   Research   │          │  │
-│  │  │  Researcher  │  │  Researcher  │  │   Manager    │          │  │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘          │  │
-│  │                 (Debate & Consensus)                             │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                              ↓                                          │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                   RISK MANAGEMENT TEAM                           │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │  │
-│  │  │ Conservative │  │   Neutral    │  │  Aggressive  │          │  │
-│  │  │   Debator    │  │   Debator    │  │   Debator    │          │  │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘          │  │
-│  │                 (Risk Assessment & Position Sizing)              │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                              ↓                                          │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                      TRADER AGENT                                │  │
-│  │  • Final trading decision                                       │  │
-│  │  • Portfolio allocation                                         │  │
-│  │  • Order execution strategy                                     │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                              ↓                                          │
-│                     🎯 Trading Actions                                  │
+│  Output: Multi-dimensional analysis reports                            │
 └─────────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     TEAM 2: RESEARCHER TEAM ⏳                           │
+│                      (Bull vs Bear Debate)                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
+│  │     Bull     │  │     Bear     │  │   Research   │                 │
+│  │  Researcher  │  │  Researcher  │  │   Manager    │                 │
+│  └──────────────┘  └──────────────┘  └──────────────┘                 │
+│                 (Multi-Round Debate & Consensus)                       │
+│                                                                         │
+│  Output: Investment thesis with bull/bear cases                        │
+└─────────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  TEAM 3: RISK MANAGEMENT TEAM ⏳                         │
+│                   (Risk Assessment Debate)                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
+│  │ Conservative │  │   Neutral    │  │  Aggressive  │                 │
+│  │   Debator    │  │   Debator    │  │   Debator    │                 │
+│  └──────────────┘  └──────────────┘  └──────────────┘                 │
+│  ┌──────────────┐                                                      │
+│  │     Risk     │                                                      │
+│  │   Manager    │                                                      │
+│  └──────────────┘                                                      │
+│                                                                         │
+│  Output: Risk parameters & position sizing                             │
+└─────────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      TEAM 4: TRADER AGENT ⏳                             │
+│                      (Final Decision & Execution)                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│  • Reviews all team outputs                                            │
+│  • Makes final trading decision                                        │
+│  • Determines portfolio allocation                                     │
+│  • Generates order execution strategy                                  │
+│                                                                         │
+│  Output: Trading actions & execution plan                              │
+└─────────────────────────────────────────────────────────────────────────┘
+                                ↓
+                        🎯 Trading Actions
 ```
 
 **Legend**: ✅ = Implemented, ⏳ = Planned
 
 ---
 
-## Layer 1: Data Retrieval
+## Data Processing Pipeline
+
+The Data Processing Pipeline (System 1) transforms raw market data into feature vectors through 3 sequential stages.
+
+---
+
+## Stage 1: Data Retrieval
 
 ### Overview
 
-Layer 1 is responsible for **heterogeneous data retrieval** from multiple external sources. It runs 5 specialized agents in parallel to collect different types of market data.
+Stage 1 is responsible for **heterogeneous data retrieval** from multiple external sources. It runs 5 specialized agents in parallel to collect different types of market data.
 
 **Status**: ✅ Fully Implemented
 
@@ -123,6 +170,8 @@ Layer 1 is responsible for **heterogeneous data retrieval** from multiple extern
 - 📚 [Quick Start Guide](../../QUICKSTART_LAYER1.md)
 - 🔧 [Tauric Integration Details](../../layer_1/TAURIC_INTEGRATION.md)
 - 📝 [Update Summary](../../LAYER1_UPDATE_SUMMARY.md)
+
+**Note**: The codebase uses `layer_1/` directory naming, which refers to Stage 1 of the Data Processing Pipeline.
 
 ### Architecture
 
@@ -352,13 +401,13 @@ print(layer1_output.technical_data["AAPL"].indicators["RSI"])
 
 ---
 
-## Layer 2: Normalization
+## Stage 2: Normalization
 
 ### Overview
 
 **Status**: ⏳ Planned
 
-Layer 2 transforms heterogeneous Layer 1 data into a standardized "DNA" dataset with unified schemas, time synchronization, and format normalization.
+Stage 2 transforms heterogeneous Stage 1 data into a standardized "DNA" dataset with unified schemas, time synchronization, and format normalization.
 
 ### Responsibilities
 
@@ -371,7 +420,7 @@ Layer 2 transforms heterogeneous Layer 1 data into a standardized "DNA" dataset 
 
 ```python
 @dataclass
-class Layer2Output:
+class Stage2Output:
     portfolio_id: str
     symbols: List[str]
     normalized_data: pd.DataFrame  # Unified tabular format
@@ -381,13 +430,13 @@ class Layer2Output:
 
 ---
 
-## Layer 3: Feature Extraction
+## Stage 3: Feature Extraction
 
 ### Overview
 
 **Status**: ⏳ Planned
 
-Layer 3 uses LLM/Neural AI to extract non-obvious patterns and generate predictive features from normalized data.
+Stage 3 uses LLM/Neural AI to extract non-obvious patterns and generate predictive features from normalized data.
 
 ### Responsibilities
 
@@ -400,7 +449,7 @@ Layer 3 uses LLM/Neural AI to extract non-obvious patterns and generate predicti
 
 ```python
 @dataclass
-class Layer3Output:
+class Stage3Output:
     portfolio_id: str
     symbols: List[str]
     features: Dict[str, FeatureVector]
@@ -418,32 +467,33 @@ class FeatureVector:
 
 ---
 
-## Financial Analysis System
+## Decision-Making System
+
+The Decision-Making System (System 2) operates **after** the Data Processing Pipeline. It consumes Stage 3 output (feature vectors) to make intelligent trading decisions through 4 specialized teams.
+
+### System Position
+
+```
+DATA PROCESSING PIPELINE          DECISION-MAKING SYSTEM
+Stage 1 → Stage 2 → Stage 3  →   Team 1 → Team 2 → Team 3 → Team 4
+  ↓         ↓         ↓              ↓        ↓        ↓        ↓
+Raw      Standard   Feature      Analysis  Research   Risk   Trading
+Data       DNA      Vectors                                  Actions
+```
+
+---
+
+## Team 1: Analyst Team
 
 ### Overview
 
 **Status**: ⏳ Planned
 
-The Financial Analysis Multi-Agent System operates **after** the 3-layer data processing pipeline. It consumes Layer 3 output (feature-extracted data) to make intelligent trading decisions through a team-based approach.
-
-### System Position
-
-```
-Layer 1 → Layer 2 → Layer 3 → Financial Analysis Agents
-  ↓         ↓         ↓              ↓
-Raw      Standard   Features    Trading Decisions
-Data       DNA      Extracted
-```
-
-### Agent Teams
-
-#### 1. Analyst Team
-
 **Purpose**: Analyze different aspects of market data and provide specialized insights
 
 **Execution**: Parallel (all analysts run simultaneously)
 
-**Agents**:
+### Agents
 
 **Fundamentals Analyst**
 - **Input**: Company financial data, earnings reports, balance sheets
@@ -465,15 +515,23 @@ Data       DNA      Extracted
 - **Analysis**: Retail sentiment, hype detection, community pulse
 - **Output**: Social sentiment score and viral trends
 
-**Team Output**: Multi-dimensional analysis report consolidating all perspectives
+### Team Output
 
-#### 2. Researcher Team
+Multi-dimensional analysis report consolidating all perspectives
+
+---
+
+## Team 2: Researcher Team
+
+### Overview
+
+**Status**: ⏳ Planned
 
 **Purpose**: Debate investment thesis from bull and bear perspectives to reach balanced conclusion
 
 **Execution**: Sequential debate with configurable rounds
 
-**Agents**:
+### Agents
 
 **Bull Researcher**
 - **Role**: Advocate for long positions
@@ -493,15 +551,23 @@ Data       DNA      Extracted
   3. Weigh arguments based on data strength
   4. Generate consensus investment thesis
 
-**Team Output**: Balanced investment recommendation with bull/bear case and probability-weighted scenarios
+### Team Output
 
-#### 3. Risk Management Team
+Balanced investment recommendation with bull/bear case and probability-weighted scenarios
+
+---
+
+## Team 3: Risk Management Team
+
+### Overview
+
+**Status**: ⏳ Planned
 
 **Purpose**: Assess risk and determine appropriate position sizing through multi-perspective debate
 
 **Execution**: Sequential debate with configurable rounds
 
-**Agents**:
+### Agents
 
 **Conservative Debator**
 - **Stance**: Risk-averse, capital preservation focused
@@ -526,9 +592,17 @@ Data       DNA      Extracted
   3. Synthesize risk perspectives
   4. Set position size, stop loss, take profit levels
 
-**Team Output**: Risk-adjusted position sizing with entry/exit parameters
+### Team Output
 
-#### 4. Trader Agent
+Risk-adjusted position sizing with entry/exit parameters
+
+---
+
+## Team 4: Trader Agent
+
+### Overview
+
+**Status**: ⏳ Planned
 
 **Purpose**: Execute final trading decision based on all team inputs
 
@@ -557,26 +631,45 @@ if analyst_score > threshold and investment_thesis == "BUY":
 
 ## Workflow & Communication
 
-### Sequential Team Execution
+### Complete System Flow
 
 ```
-1. Data Ingestion (Layer 3 Features)
+╔═════════════════════════════════════════════════════════════════════╗
+║             SYSTEM 1: DATA PROCESSING PIPELINE                      ║
+╚═════════════════════════════════════════════════════════════════════╝
+
+1. Stage 1: Data Retrieval (Parallel)
+   - 5 agents collect raw data simultaneously
    ↓
-2. Analyst Team (Parallel)
+2. Stage 2: Normalization
+   - Standardize formats and timestamps
+   ↓
+3. Stage 3: Feature Extraction
+   - LLM/Neural AI extracts patterns
+   ↓
+   Feature Vectors Output
+
+╔═════════════════════════════════════════════════════════════════════╗
+║             SYSTEM 2: DECISION-MAKING SYSTEM                        ║
+╚═════════════════════════════════════════════════════════════════════╝
+
+4. Team 1: Analyst Team (Parallel)
    - All 4 analysts run simultaneously
    - Consolidate findings
    ↓
-3. Researcher Team (Sequential Debate)
+5. Team 2: Researcher Team (Sequential Debate)
    - Bull/Bear debate in rounds
    - Research Manager synthesizes
    ↓
-4. Risk Management Team (Sequential Debate)
+6. Team 3: Risk Management Team (Sequential Debate)
    - Conservative/Neutral/Aggressive debate
    - Risk Manager sets parameters
    ↓
-5. Trader Agent (Final Decision)
+7. Team 4: Trader Agent (Final Decision)
    - Review all inputs
    - Execute or reject trade
+   ↓
+   Trading Actions
 ```
 
 ### Communication Pattern
@@ -587,35 +680,35 @@ if analyst_score > threshold and investment_thesis == "BUY":
 ```python
 @dataclass
 class TradingAgentState:
-    # Input
+    # Input from System 1 (Data Processing Pipeline)
     portfolio: List[str]
-    layer3_features: Dict[str, FeatureVector]  # From Layer 3
+    feature_vectors: Dict[str, FeatureVector]  # From Stage 3
 
-    # Analyst Team Output
+    # Team 1 Output (Analyst Team)
     analyst_reports: Dict[str, AnalystReport]
 
-    # Researcher Team Output
+    # Team 2 Output (Researcher Team)
     investment_thesis: InvestmentThesis
     bull_case: str
     bear_case: str
     confidence: float
 
-    # Risk Management Output
+    # Team 3 Output (Risk Management Team)
     risk_parameters: RiskParameters
     position_size: float
     stop_loss: float
     take_profit: float
 
-    # Trader Output
+    # Team 4 Output (Trader Agent)
     trading_decision: TradingDecision
     execution_plan: ExecutionPlan
 ```
 
-### Interface Contract
+### System Interfaces
 
-**Input to Financial Analysis System**:
+**Data Processing Pipeline → Decision-Making System**:
 ```python
-# Layer 3 Output (Feature-Extracted Dataset)
+# Stage 3 Output → Team 1 Input (Feature Vectors)
 {
     "portfolio_id": "...",
     "symbols": ["AAPL", "TSLA"],
@@ -633,7 +726,7 @@ class TradingAgentState:
 }
 ```
 
-**Output from Financial Analysis System**:
+**Decision-Making System → Trading Execution**:
 ```python
 {
     "trading_decisions": [
@@ -660,23 +753,23 @@ This architecture is inspired by [TauricResearch/TradingAgents](https://github.c
 ### Clear Separation
 
 ```
-DATA PROCESSING (Layers 1-3)          DECISION MAKING (Financial Analysis)
-├─ Layer 1: Get the data              ├─ Analyst Team: Analyze data
-├─ Layer 2: Normalize data            ├─ Researcher Team: Debate thesis
-├─ Layer 3: Extract features          ├─ Risk Mgmt: Size positions
-                ↓                      └─ Trader: Execute trades
+SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
+├─ Stage 1: Get the data              ├─ Team 1: Analyze data
+├─ Stage 2: Normalize data            ├─ Team 2: Debate thesis
+├─ Stage 3: Extract features          ├─ Team 3: Size positions
+                ↓                      └─ Team 4: Execute trades
         Feature vectors
 ```
 
 ### What We Integrated from Tauric ✅
 
-- ✅ Technical indicator calculation tools (Layer 1)
-- ✅ Fundamental metrics retrieval patterns (Layer 1)
+**Data Processing Pipeline (System 1)**:
+- ✅ Technical indicator calculation tools (Stage 1)
+- ✅ Fundamental metrics retrieval patterns (Stage 1)
 - ✅ Stock data utility functions (`layer_1/agents/utils/stock_tools.py`)
 - ✅ Multi-source data collection approach
 
-### What's in Financial Analysis System ⏳
-
+**Decision-Making System (System 2)** ⏳:
 - Multi-agent debate patterns (bull/bear, risk debators)
 - Hierarchical team structure (analysts → researchers → risk → trader)
 - LangGraph workflow orchestration
@@ -684,20 +777,20 @@ DATA PROCESSING (Layers 1-3)          DECISION MAKING (Financial Analysis)
 
 ### Tauric Agent Mapping
 
-| Tauric Agent | Event Horizon Equivalent |
-|--------------|-------------------------|
-| fundamentals_analyst | Fundamentals Analyst |
-| market_analyst | Market Analyst |
-| news_analyst | News Analyst |
-| social_media_analyst | Social Media Analyst |
-| bull_researcher | Bull Researcher |
-| bear_researcher | Bear Researcher |
-| research_manager | Research Manager |
-| safe_debator | Conservative Debator |
-| neutral_debator | Neutral Debator |
-| risky_debator | Aggressive Debator |
-| risk_manager | Risk Manager |
-| trader | Trader Agent |
+| Tauric Agent | Event Horizon Equivalent | System/Team |
+|--------------|-------------------------|-------------|
+| fundamentals_analyst | Fundamentals Analyst | System 2 - Team 1 |
+| market_analyst | Market Analyst | System 2 - Team 1 |
+| news_analyst | News Analyst | System 2 - Team 1 |
+| social_media_analyst | Social Media Analyst | System 2 - Team 1 |
+| bull_researcher | Bull Researcher | System 2 - Team 2 |
+| bear_researcher | Bear Researcher | System 2 - Team 2 |
+| research_manager | Research Manager | System 2 - Team 2 |
+| safe_debator | Conservative Debator | System 2 - Team 3 |
+| neutral_debator | Neutral Debator | System 2 - Team 3 |
+| risky_debator | Aggressive Debator | System 2 - Team 3 |
+| risk_manager | Risk Manager | System 2 - Team 3 |
+| trader | Trader Agent | System 2 - Team 4 |
 
 **Reference Location**: `core_refs/TradingAgents/`
 
@@ -705,49 +798,53 @@ DATA PROCESSING (Layers 1-3)          DECISION MAKING (Financial Analysis)
 
 ## Implementation Status
 
-### Phase 1: Foundation ✅ COMPLETED
-- ✅ Layer 1 data retrieval agents implemented
+### System 1: Data Processing Pipeline
+
+#### Phase 1: Stage 1 Implementation ✅ COMPLETED
+- ✅ Stage 1 data retrieval agents implemented
 - ✅ Tauric repository cloned for reference
 - ✅ 5 agents running in parallel (candlestick, earnings, news, technical, fundamentals)
 - ✅ Orchestrator with ThreadPoolExecutor
 
-### Phase 2: Normalization ⏳ PLANNED
-- [ ] Layer 2 normalization pipeline
+#### Phase 2: Stage 2 Implementation ⏳ PLANNED
+- [ ] Stage 2 normalization pipeline
 - [ ] Time synchronization across data sources
 - [ ] Symbol mapping and standardization
 - [ ] Unified tabular schema
 
-### Phase 3: Feature Extraction ⏳ PLANNED
-- [ ] Layer 3 feature extraction with LLM/Neural AI
+#### Phase 3: Stage 3 Implementation ⏳ PLANNED
+- [ ] Stage 3 feature extraction with LLM/Neural AI
 - [ ] Pattern recognition in time-series data
 - [ ] Embedding generation for text data
 - [ ] Predictive signal discovery
 
-### Phase 4: Analyst Team ⏳ PLANNED
+### System 2: Decision-Making System
+
+#### Phase 4: Team 1 Implementation ⏳ PLANNED
 - [ ] Implement 4 analyst agents (fundamentals, market, news, social)
 - [ ] Create analyst orchestrator for parallel execution
 - [ ] Define analyst report schema
 - [ ] Test analyst team on sample data
 
-### Phase 5: Researcher Team ⏳ PLANNED
+#### Phase 5: Team 2 Implementation ⏳ PLANNED
 - [ ] Implement bull/bear researchers
 - [ ] Implement research manager with debate logic
 - [ ] Create investment thesis schema
 - [ ] Test multi-round debate mechanism
 
-### Phase 6: Risk Management Team ⏳ PLANNED
+#### Phase 6: Team 3 Implementation ⏳ PLANNED
 - [ ] Implement 3 risk debators (conservative, neutral, aggressive)
 - [ ] Implement risk manager with debate orchestration
 - [ ] Define risk parameters schema
 - [ ] Test position sizing logic
 
-### Phase 7: Trader Agent ⏳ PLANNED
+#### Phase 7: Team 4 Implementation ⏳ PLANNED
 - [ ] Implement trader agent decision logic
 - [ ] Create execution plan generator
 - [ ] Integrate with all upstream teams
 - [ ] End-to-end system testing
 
-### Phase 8: LangGraph Integration ⏳ PLANNED
+#### Phase 8: System Integration ⏳ PLANNED
 - [ ] Design state machine for workflow
 - [ ] Implement LangGraph orchestration
 - [ ] Add checkpointing and retry logic
@@ -774,11 +871,12 @@ DATA PROCESSING (Layers 1-3)          DECISION MAKING (Financial Analysis)
 
 ## Key Principles
 
-1. **Separation of Concerns**: Data processing (Layers 1-3) ≠ Decision making (Financial Analysis)
-2. **Multi-Perspective Analysis**: Debate and consensus for robust decisions
-3. **Risk-Aware**: Explicit risk management team prevents reckless trades
-4. **Inspired by Research**: Leverages proven patterns from Tauric framework
-5. **Extensible Architecture**: Easy to add new agent types and capabilities
+1. **Two-System Architecture**: Data Processing Pipeline (System 1) and Decision-Making System (System 2) are separate but connected
+2. **Separation of Concerns**: Data transformation ≠ Trading decisions
+3. **Multi-Perspective Analysis**: Debate and consensus for robust decisions
+4. **Risk-Aware**: Explicit risk management team prevents reckless trades
+5. **Inspired by Research**: Leverages proven patterns from Tauric framework
+6. **Extensible Architecture**: Easy to add new agents to either system
 
 ---
 
