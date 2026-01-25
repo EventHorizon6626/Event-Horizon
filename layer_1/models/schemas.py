@@ -92,6 +92,30 @@ class SECFilingsData:
 
 
 @dataclass
+class TechnicalData:
+    """Output schema for Technical Indicators Agent"""
+
+    symbol: str
+    indicators: Dict[str, str] = field(default_factory=dict)  # indicator_name -> result_text
+    trade_date: str = ""
+    look_back_days: int = 30
+    data_source: str = "yfinance"
+    retrieved_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    error: Optional[str] = None
+
+
+@dataclass
+class FundamentalsData:
+    """Output schema for Fundamentals Agent"""
+
+    symbol: str
+    fundamentals_text: str = ""
+    data_source: str = "yfinance"
+    retrieved_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    error: Optional[str] = None
+
+
+@dataclass
 class Layer1Output:
     """
     Complete Layer 1 output for a portfolio
@@ -110,6 +134,8 @@ class Layer1Output:
     options_data: Dict[str, OptionsFlowData] = field(default_factory=dict)
     social_data: Dict[str, SocialMediaData] = field(default_factory=dict)
     sec_data: Dict[str, SECFilingsData] = field(default_factory=dict)
+    technical_data: Dict[str, TechnicalData] = field(default_factory=dict)
+    fundamentals_data: Dict[str, FundamentalsData] = field(default_factory=dict)
 
     # Metadata
     execution_time_seconds: float = 0.0
@@ -129,6 +155,8 @@ class Layer1Output:
             "options_data": {k: v.__dict__ for k, v in self.options_data.items()},
             "social_data": {k: v.__dict__ for k, v in self.social_data.items()},
             "sec_data": {k: v.__dict__ for k, v in self.sec_data.items()},
+            "technical_data": {k: v.__dict__ for k, v in self.technical_data.items()},
+            "fundamentals_data": {k: v.__dict__ for k, v in self.fundamentals_data.items()},
             "execution_time_seconds": self.execution_time_seconds,
             "agents_executed": self.agents_executed,
             "timestamp": self.timestamp,

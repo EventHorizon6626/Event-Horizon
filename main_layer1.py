@@ -3,6 +3,13 @@ Event Horizon - Layer 1 Data Retrieval System
 
 This script demonstrates the Layer 1 data retrieval architecture.
 Uses the Layer1Orchestrator to run agents in parallel.
+
+Enhanced with Tauric Research TradingAgents patterns:
+- Technical indicators agent (SMA, EMA, RSI, MACD)
+- Fundamentals analysis agent (P/E, ROE, financial ratios)
+- Utility tools for stock data retrieval
+
+Reference: https://github.com/TauricResearch/TradingAgents
 """
 
 import json
@@ -108,6 +115,25 @@ def display_layer1_results(result: dict):
                 candle_count = len(data.candles) if hasattr(data, 'candles') else 0
                 print(f"   ✓ {symbol}: {candle_count} candles ({data.period}, {data.interval})")
 
+    # Technical Data (Tauric-inspired)
+    if hasattr(layer1_output, "technical_data") and layer1_output.technical_data:
+        print(f"\n📊 Technical Data: {len(layer1_output.technical_data)} symbols")
+        for symbol, data in list(layer1_output.technical_data.items())[:3]:
+            if data.error:
+                print(f"   ✗ {symbol}: {data.error}")
+            else:
+                indicator_count = len(data.indicators) if hasattr(data, 'indicators') else 0
+                print(f"   ✓ {symbol}: {indicator_count} indicators")
+
+    # Fundamentals Data (Tauric-inspired)
+    if hasattr(layer1_output, "fundamentals_data") and layer1_output.fundamentals_data:
+        print(f"\n💰 Fundamentals Data: {len(layer1_output.fundamentals_data)} symbols")
+        for symbol, data in list(layer1_output.fundamentals_data.items())[:3]:
+            if data.error:
+                print(f"   ✗ {symbol}: {data.error}")
+            else:
+                print(f"   ✓ {symbol}: Fundamental metrics retrieved")
+
 
 def main():
     """Main execution function"""
@@ -127,9 +153,10 @@ def main():
     print(f"  Symbols: {', '.join(test_portfolio['portfolio'])}")
 
     # Configure Layer 1 Orchestrator
+    # Now includes Tauric-inspired technical and fundamentals agents
     layer1_config = {
-        "enabled_agents": ["candlestick", "earnings", "news"],
-        "max_workers": 3,
+        "enabled_agents": ["candlestick", "earnings", "news", "technical", "fundamentals"],
+        "max_workers": 5,
         "agent_configs": {
             "candlestick": {
                 "period": "1mo",
@@ -142,6 +169,14 @@ def main():
             "news": {
                 "max_articles_per_stock": 10,
                 "days_back": 7,
+            },
+            "technical": {
+                "indicators": ["SMA", "RSI", "MACD"],
+                "look_back_days": 30,
+            },
+            "fundamentals": {
+                "include_ratios": True,
+                "include_financials": True,
             },
         },
     }
@@ -177,10 +212,17 @@ def main():
     # Summary
     print_section("LAYER 1 EXECUTION COMPLETE", "=")
     print("✅ Layer 1 data retrieval completed!")
+    print(f"\nData Retrieved (Tauric-inspired architecture):")
+    print("  ✓ Price Data (OHLCV candles)")
+    print("  ✓ Earnings & Financial Reports")
+    print("  ✓ News Articles & Headlines")
+    print("  ✓ Technical Indicators (SMA, RSI, MACD)")
+    print("  ✓ Fundamental Metrics (P/E, ROE, Debt/Equity)")
     print(f"\nNext Steps:")
     print("  1. Review the output file for complete data")
     print("  2. Layer 2 will normalize this heterogeneous data")
     print("  3. Layer 3 will extract features for trading signals")
+    print("\n📚 Integration: Combined Event Horizon + Tauric Research patterns")
 
 
 if __name__ == "__main__":
