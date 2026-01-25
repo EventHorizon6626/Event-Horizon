@@ -6,27 +6,28 @@
 /home/vytrieu/EventHorizon/
 ├── FE/                  # React Frontend (nginx)
 ├── BE/                  # Node.js Backend (PM2)
-└── Event-Horizon-AI/    # Python AI API (systemd)
+└── Event-Horizon-AI/    # Python AI API (Docker or systemd)
 ```
 
-## Initial Setup on Server
+## Deployment Methods
 
-### 1. Clone Repository
+You can deploy using either:
+1. **Docker** (Recommended) - Isolated, reproducible, easy updates
+2. **Systemd** - Direct installation, simpler for debugging
+
+---
+
+# Method 1: Docker Deployment (Recommended)
+
+## Quick Start
+
 ```bash
 cd /home/vytrieu/EventHorizon
 git clone https://github.com/EventHorizon6626/Event-Horizon-AI.git
 cd Event-Horizon-AI
 ```
 
-### 2. Create Virtual Environment
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 3. Configure Environment
+### 2. Configure Environment
 ```bash
 cp .env.example .env
 # Edit .env with your API keys:

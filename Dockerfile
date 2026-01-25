@@ -36,9 +36,12 @@ RUN useradd -m -u 1000 eventuser && \
 # Switch to non-root user
 USER eventuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+# Expose API port
+EXPOSE 8001
 
-# Default command
-CMD ["python", "main.py"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Default command - Run FastAPI server
+CMD ["uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8001"]
