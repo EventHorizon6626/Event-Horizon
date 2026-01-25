@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from datetime import datetime
 
 from core.base import BaseAgent
-from services.news_api_client import NewsAPIClient
+from layer_1.services.news_api_client import NewsAPIClient
 from layer_1.models.schemas import NewsData
 
 

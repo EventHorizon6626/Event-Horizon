@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from datetime import datetime
 
 from core.base import BaseAgent
-from services.financial_data_client import FinancialDataClient
+from layer_1.services.financial_data_client import FinancialDataClient
 from layer_1.models.schemas import EarningsData
 
 
