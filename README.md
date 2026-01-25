@@ -6,6 +6,11 @@ Multi-agent trading system with two integrated systems:
 
 ---
 
+## REPO
+AI core: https://github.com/EventHorizon6626/Event-Horizon
+Frontend: https://github.com/EventHorizon6626/FE
+Backend: https://github.com/EventHorizon6626/BE
+
 ## Quick Start
 
 ```bash
