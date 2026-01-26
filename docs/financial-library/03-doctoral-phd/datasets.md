@@ -169,7 +169,7 @@ Academic-grade datasets for rigorous empirical research and publications.
 
 ### Key Principles:
 1. **Survivor-Bias Free**: Use all stocks, including delistings
-2. **Point-in-Time**: Use data available at decision time (avoid look-ahead bias)
+2. **Point-in-Time**: Use data available at analyzer time (avoid look-ahead bias)
 3. **Winsorize**: Handle outliers (typically 1% / 99%)
 4. **Document**: Keep detailed notes on data filters
 5. **Reproducible**: Save code, random seeds

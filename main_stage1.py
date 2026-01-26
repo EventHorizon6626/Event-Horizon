@@ -36,7 +36,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-from data_pipeline import Stage1Orchestrator
+from event_horizon.data_pipeline import Stage1Orchestrator
 
 
 def setup_logging():
@@ -230,7 +230,7 @@ def main():
     print("  1. Review the output file for complete heterogeneous data")
     print("  2. Stage 2 will normalize this data into unified 'DNA' format")
     print("  3. Stage 3 will extract features using LLM/Neural networks")
-    print("  4. Decision System will make trading decisions")
+    print("  4. analyzer System will make trading decisions")
 
 
 if __name__ == "__main__":

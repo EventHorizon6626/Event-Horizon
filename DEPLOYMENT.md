@@ -51,21 +51,37 @@ curl http://localhost:8001/health
 
 ## Continuous Deployment
 
-### Option 1: Manual Deployment Script
-```bash
-# Make script executable
-chmod +x deploy_ai.sh
+The unified `deploy.sh` script supports both deployment methods:
 
-# Run in background with nohup
-nohup ./deploy_ai.sh &
+```bash
+# Usage: ./deploy.sh [docker|systemd] [--once]
+chmod +x deploy.sh
+```
+
+### Option 1: One-time Deployment
+```bash
+# Docker deployment (single run)
+./deploy.sh docker --once
+
+# Systemd deployment (single run)
+./deploy.sh systemd --once
+```
+
+### Option 2: Continuous Deployment Loop
+```bash
+# Docker - Run in background with nohup
+nohup ./deploy.sh docker &
+
+# Systemd - Run in background
+nohup ./deploy.sh systemd &
 
 # Or use screen/tmux
 screen -S deploy-ai
-./deploy_ai.sh
+./deploy.sh docker  # or systemd
 # Ctrl+A, D to detach
 ```
 
-### Option 2: Systemd Timer (Recommended)
+### Option 3: Systemd Service (Recommended)
 Create `/etc/systemd/system/evth-ai-deploy.service`:
 ```ini
 [Unit]
@@ -75,8 +91,8 @@ After=network.target
 [Service]
 Type=simple
 User=vytrieu
-WorkingDirectory=/home/vytrieu/EventHorizon
-ExecStart=/home/vytrieu/EventHorizon/Event-Horizon-AI/deploy_ai.sh
+WorkingDirectory=/home/vytrieu/EventHorizon/Event-Horizon-AI
+ExecStart=/home/vytrieu/EventHorizon/Event-Horizon-AI/deploy.sh docker
 Restart=always
 ```
 
@@ -154,7 +170,9 @@ sudo systemctl status evth-ai
 sudo journalctl -u evth-ai -f
 
 # Deployment logs
-tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_ai_loop.log
+tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_docker.log
+# or
+tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_systemd.log
 ```
 
 ### Test API

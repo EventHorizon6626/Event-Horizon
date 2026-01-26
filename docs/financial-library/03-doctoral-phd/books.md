@@ -15,7 +15,7 @@ Research-oriented texts and advanced theoretical treatises for academic finance.
 - **Prerequisites**: Stochastic calculus, measure theory
 - **Price**: ~$80-100
 
-### 2. **"Financial Decisions and Markets: A Course in Asset Pricing"**
+### 2. **"Financial Analyzers and Markets: A Course in Asset Pricing"**
 - **Author**: John Y. Campbell
 - **Edition**: 2017
 - **Publisher**: Princeton University Press
@@ -165,7 +165,7 @@ Research-oriented texts and advanced theoretical treatises for academic finance.
 
 ### Chicago Booth PhD - Asset Pricing Track:
 1. Cochrane - Asset Pricing
-2. Campbell - Financial Decisions and Markets
+2. Campbell - Financial Analyzers and Markets
 3. Back - Asset Pricing and Portfolio Choice
 4. Duffie - Dynamic Asset Pricing Theory
 

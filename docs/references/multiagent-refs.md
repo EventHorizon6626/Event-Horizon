@@ -690,7 +690,7 @@ Retrieval-Augmented Generation has transformed from simple vector search (2020) 
 
 **How It Works:**
 
-1. **Adaptive Retrieval Decision (Step 1)**:
+1. **Adaptive Retrieval analyzer (Step 1)**:
    - Model determines if retrieval would help current generation
    - Outputs **retrieval token** to call retriever on-demand
    - Only retrieves when necessary
@@ -1101,7 +1101,7 @@ Retrieval-Augmented Generation has transformed from simple vector search (2020) 
 **Industry Adoption (2024-2025)**:
 - Dubbed the **"Year of the Agent"** in 2025
 - Agentic workflows driving massive progress beyond basic RAG
-- Enterprise applications in decision support and analysis
+- Enterprise applications in analyzer support and analysis
 - Natural hazards and extreme weather event analysis (MARSHA system)
 
 **Resources**:
@@ -1306,7 +1306,7 @@ Three dominant frameworks have emerged: **LangGraph**, **CrewAI**, and **AutoGen
 **WildfireGPT (MARSHA)** - [Nature: Multi-Agent RAG for Hazard Adaptation](https://www.nature.com/articles/s44168-025-00254-1)
 - Multi-agent LLM system called MARSHA
 - Natural hazard and extreme weather event analysis
-- RAG-based decision support for emergency response
+- RAG-based analyzer support for emergency response
 - Real-time information retrieval and synthesis
 
 **Healthcare Agentic RAG** - [Evidence-Based Patient Education](https://pmc.ncbi.nlm.nih.gov/articles/PMC12306375/)
@@ -1318,7 +1318,7 @@ Three dominant frameworks have emerged: **LangGraph**, **CrewAI**, and **AutoGen
 **Enterprise Knowledge Assistants**:
 - Collaborative research platforms
 - Multi-modal agent systems
-- Real-time decision support
+- Real-time analyzer support
 - Adaptive chatbots and virtual assistants
 
 ### 20. Top Enterprise RAG Frameworks (November 2025)
@@ -2230,7 +2230,7 @@ Where:
 
 14. **[Multi-Agent Consensus Seeking via LLMs](https://arxiv.org/abs/2310.20151)**
     - Consensus mechanisms for LLM agents
-    - Democratic decision-making
+    - Democratic analyzer-making
 
 15. **[SocraticAI: Multi-Agent Debate for Reasoning](https://arxiv.org/abs/2305.14325)**
     - Socratic questioning in agent debates

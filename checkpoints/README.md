@@ -40,7 +40,7 @@ This directory contains milestone checkpoints documenting the development journe
 **Planned Goals**:
 - Stage 2: Data normalization & feature extraction
 - Stage 3: LLM/Neural network analysis
-- Decision system: Trading recommendations
+- analyzer system: Trading recommendations
 - Caching stage (Redis)
 - Rate limiting & security hardening
 - Performance optimization
@@ -72,7 +72,7 @@ Checkpoint 03 (TBD)
     │
     ├─ Stage 2 normalization
     ├─ Stage 3 AI analysis
-    └─ Decision system
+    └─ analyzer system
 ```
 
 ---

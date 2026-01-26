@@ -1,11 +1,11 @@
 # Event Horizon - Multi-Agent Architecture
 
-**Status**: Data Pipeline Stage 1 ✅ Implemented | Data Pipeline Stages 2-3 & Decision System ⏳ Planned
+**Status**: Data Pipeline Stage 1 ✅ Implemented | Data Pipeline Stages 2-3 & analyzer System ⏳ Planned
 **Last Updated**: 2026-01-25
 
 Complete multi-agent architecture for Event Horizon, consisting of:
 - **Data Processing Pipeline** (3 stages): Raw data → Normalized data → Feature vectors
-- **Decision-Making System** (4 teams): Analysis → Research → Risk Management → Trading
+- **analyzer-Making System** (4 teams): Analysis → Research → Risk Management → Trading
 
 ---
 
@@ -16,7 +16,7 @@ Complete multi-agent architecture for Event Horizon, consisting of:
    - [Stage 1: Data Retrieval](#stage-1-data-retrieval)
    - [Stage 2: Normalization](#stage-2-normalization)
    - [Stage 3: Feature Extraction](#stage-3-feature-extraction)
-3. [Decision-Making System](#decision-making-system)
+3. [analyzer-Making System](#analyzer-making-system)
    - [Team 1: Analyst Team](#team-1-analyst-team)
    - [Team 2: Researcher Team](#team-2-researcher-team)
    - [Team 3: Risk Management Team](#team-3-risk-management-team)
@@ -35,7 +35,7 @@ Event Horizon uses **two separate multi-agent systems** that work together:
 **Stages**: 3 (Data Retrieval → Normalization → Feature Extraction)
 **Status**: Stage 1 ✅ Implemented, Stages 2-3 ⏳ Planned
 
-### System 2: Decision-Making System
+### System 2: analyzer-Making System
 **Purpose**: Make intelligent trading decisions from feature vectors
 **Teams**: 4 (Analyst → Researcher → Risk Management → Trader)
 **Status**: ⏳ Planned
@@ -84,7 +84,7 @@ Event Horizon uses **two separate multi-agent systems** that work together:
 └─────────────────────────────────────────────────────────────────────────┘
                                 ↓
 ╔═════════════════════════════════════════════════════════════════════════╗
-║                   SYSTEM 2: DECISION-MAKING SYSTEM                      ║
+║                   SYSTEM 2: analyzer-MAKING SYSTEM                      ║
 ╚═════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -134,10 +134,10 @@ Event Horizon uses **two separate multi-agent systems** that work together:
                                 ↓
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      TEAM 4: TRADER AGENT ⏳                             │
-│                      (Final Decision & Execution)                       │
+│                      (Final analyzer & Execution)                       │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  • Reviews all team outputs                                            │
-│  • Makes final trading decision                                        │
+│  • Makes final trading analyzer                                        │
 │  • Determines portfolio allocation                                     │
 │  • Generates order execution strategy                                  │
 │                                                                         │
@@ -467,14 +467,14 @@ class FeatureVector:
 
 ---
 
-## Decision-Making System
+## analyzer-Making System
 
-The Decision-Making System (System 2) operates **after** the Data Processing Pipeline. It consumes Stage 3 output (feature vectors) to make intelligent trading decisions through 4 specialized teams.
+The analyzer-Making System (System 2) operates **after** the Data Processing Pipeline. It consumes Stage 3 output (feature vectors) to make intelligent trading decisions through 4 specialized teams.
 
 ### System Position
 
 ```
-DATA PROCESSING PIPELINE          DECISION-MAKING SYSTEM
+DATA PROCESSING PIPELINE          analyzer-MAKING SYSTEM
 Stage 1 → Stage 2 → Stage 3  →   Team 1 → Team 2 → Team 3 → Team 4
   ↓         ↓         ↓              ↓        ↓        ↓        ↓
 Raw      Standard   Feature      Analysis  Research   Risk   Trading
@@ -604,16 +604,16 @@ Risk-adjusted position sizing with entry/exit parameters
 
 **Status**: ⏳ Planned
 
-**Purpose**: Execute final trading decision based on all team inputs
+**Purpose**: Execute final trading analyzer based on all team inputs
 
 **Responsibilities**:
 - Review all team outputs (analyst, researcher, risk management)
-- Make final go/no-go decision
+- Make final go/no-go analyzer
 - Determine exact position sizing within risk parameters
 - Generate order execution strategy
 - Monitor position post-entry
 
-**Decision Framework**:
+**analyzer Framework**:
 ```python
 if analyst_score > threshold and investment_thesis == "BUY":
     if risk_parameters.acceptable:
@@ -650,7 +650,7 @@ if analyst_score > threshold and investment_thesis == "BUY":
    Feature Vectors Output
 
 ╔═════════════════════════════════════════════════════════════════════╗
-║             SYSTEM 2: DECISION-MAKING SYSTEM                        ║
+║             SYSTEM 2: analyzer-MAKING SYSTEM                        ║
 ╚═════════════════════════════════════════════════════════════════════╝
 
 4. Team 1: Analyst Team (Parallel)
@@ -665,7 +665,7 @@ if analyst_score > threshold and investment_thesis == "BUY":
    - Conservative/Neutral/Aggressive debate
    - Risk Manager sets parameters
    ↓
-7. Team 4: Trader Agent (Final Decision)
+7. Team 4: Trader Agent (Final analyzer)
    - Review all inputs
    - Execute or reject trade
    ↓
@@ -700,13 +700,13 @@ class TradingAgentState:
     take_profit: float
 
     # Team 4 Output (Trader Agent)
-    trading_decision: TradingDecision
+    trading_decision: TradingAnalyzer
     execution_plan: ExecutionPlan
 ```
 
 ### System Interfaces
 
-**Data Processing Pipeline → Decision-Making System**:
+**Data Processing Pipeline → analyzer-Making System**:
 ```python
 # Stage 3 Output → Team 1 Input (Feature Vectors)
 {
@@ -726,7 +726,7 @@ class TradingAgentState:
 }
 ```
 
-**Decision-Making System → Trading Execution**:
+**analyzer-Making System → Trading Execution**:
 ```python
 {
     "trading_decisions": [
@@ -753,7 +753,7 @@ This architecture is inspired by [TauricResearch/TradingAgents](https://github.c
 ### Clear Separation
 
 ```
-SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
+SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: analyzer-MAKING SYSTEM
 ├─ Stage 1: Get the data              ├─ Team 1: Analyze data
 ├─ Stage 2: Normalize data            ├─ Team 2: Debate thesis
 ├─ Stage 3: Extract features          ├─ Team 3: Size positions
@@ -769,7 +769,7 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
 - ✅ Stock data utility functions (`stage_1/agents/utils/stock_tools.py`)
 - ✅ Multi-source data collection approach
 
-**Decision-Making System (System 2)** ⏳:
+**analyzer-Making System (System 2)** ⏳:
 - Multi-agent debate patterns (bull/bear, risk debators)
 - Hierarchical team structure (analysts → researchers → risk → trader)
 - LangGraph workflow orchestration
@@ -818,7 +818,7 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
 - [ ] Embedding generation for text data
 - [ ] Predictive signal discovery
 
-### System 2: Decision-Making System
+### System 2: analyzer-Making System
 
 #### Phase 4: Team 1 Implementation ⏳ PLANNED
 - [ ] Implement 4 analyst agents (fundamentals, market, news, social)
@@ -839,7 +839,7 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
 - [ ] Test position sizing logic
 
 #### Phase 7: Team 4 Implementation ⏳ PLANNED
-- [ ] Implement trader agent decision logic
+- [ ] Implement trader agent analyzer logic
 - [ ] Create execution plan generator
 - [ ] Integrate with all upstream teams
 - [ ] End-to-end system testing
@@ -871,7 +871,7 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
 
 ## Key Principles
 
-1. **Two-System Architecture**: Data Processing Pipeline (System 1) and Decision-Making System (System 2) are separate but connected
+1. **Two-System Architecture**: Data Processing Pipeline (System 1) and analyzer-Making System (System 2) are separate but connected
 2. **Separation of Concerns**: Data transformation ≠ Trading decisions
 3. **Multi-Perspective Analysis**: Debate and consensus for robust decisions
 4. **Risk-Aware**: Explicit risk management team prevents reckless trades

@@ -134,7 +134,7 @@ Query: "What's the weather in Paris and book a restaurant?"
 - Research task orchestration
 - Multi-step data processing pipelines
 - Complex problem-solving workflows
-- Strategic decision-making systems
+- Strategic analyzer-making systems
 
 **Example Workflow**:
 ```
@@ -168,7 +168,7 @@ Plan:
 **Benefits**:
 - Structured approach to complexity
 - Better resource management
-- Transparent decision-making
+- Transparent analyzer-making
 - Easier debugging and monitoring
 
 **Resources**:
@@ -208,7 +208,7 @@ Plan:
 - Software development teams (ChatDev, MetaGPT)
 - Multi-perspective analysis
 - Collaborative research
-- Decision support systems
+- analyzer support systems
 - Complex problem-solving
 
 **Example Workflow**:
@@ -296,7 +296,7 @@ Action: respond_to_user(...)
 
 **Benefits**:
 - Improved accuracy on complex reasoning
-- Interpretable decision-making
+- Interpretable analyzer-making
 - Better handling of multi-step problems
 
 **Use Cases**:
@@ -369,10 +369,10 @@ Action: respond_to_user(...)
 
 ### 9. Human-in-the-Loop (HITL)
 
-**Core Concept**: Strategic human intervention at critical decision points.
+**Core Concept**: Strategic human intervention at critical analyzer points.
 
 **How It Works**:
-1. Agent identifies decision requiring human judgment
+1. Agent identifies analyzer requiring human judgment
 2. Presents options with reasoning to human
 3. Human provides guidance or approval
 4. Agent incorporates feedback and continues
@@ -622,7 +622,7 @@ Action: respond_to_user(...)
 - **Complexity Assessment**: How difficult is task?
 - **Domain Identification**: Which area of expertise?
 
-**Routing Decisions**:
+**Routing Analyzers**:
 - **Agent Selection**: Which specialized agent handles this?
 - **Model Selection**: Which LLM is optimal?
 - **Tool Selection**: Which tools are needed?
@@ -873,7 +873,7 @@ Real-world agentic systems typically combine multiple patterns. Here are proven 
 
 ### Research Directions
 - Self-improving agents (meta-learning)
-- Explainable agent decision-making
+- Explainable agent analyzer-making
 - Agent safety and alignment
 - Efficient training methods (GRPO)
 - Small model orchestration (SLM-Agents)
