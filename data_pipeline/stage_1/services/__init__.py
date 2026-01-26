@@ -1,5 +1,5 @@
 """
-Stage 1 Services Layer
+Stage 1 Services Stages
 
 External API clients for data retrieval.
 Services handle low-level API communication and return raw data.

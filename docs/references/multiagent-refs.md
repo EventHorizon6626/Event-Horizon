@@ -81,7 +81,7 @@ A comprehensive resource guide for building sophisticated multi-agent systems, f
 ## Core Architectural Patterns
 
 ### 1. Hierarchical Multi-Agent Systems (HMAS)
-Agents organized in hierarchical layers with different levels of abstraction and control.
+Agents organized in hierarchical stages with different levels of abstraction and control.
 
 **Key Concepts:**
 - **Top-Down Control**: High-level strategic agents coordinate lower-level operational agents
@@ -205,7 +205,7 @@ Multiple agents process the same input, then aggregate or select outputs.
 - **Ensemble Methods**: Voting, averaging, stacking
 - **Meta-Learning Selection**: Learning which agent to trust
 - **Cascading Experts**: Sequential refinement
-- **Layered Architectures**: Multiple processing layers
+- **stageed Architectures**: Multiple processing stages
 - **Recursive Refinement**: Iterative improvement cycles
 
 **Resources:**
@@ -852,7 +852,7 @@ Retrieval-Augmented Generation has transformed from simple vector search (2020) 
    - Cluster related text chunks based on embeddings
    - Summarize clusters to create higher-level representations
    - Repeat recursively up to desired depth
-   - Index all layers in vector store
+   - Index all stages in vector store
 
 2. **Multi-Level Retrieval**:
    - Retrieve from appropriate abstraction level
@@ -1722,7 +1722,7 @@ Comprehensive frameworks for intelligent behavior.
    - https://arxiv.org/abs/2308.10848
 
 5. **"Mixture-of-Agents Enhances Large Language Model Capabilities"** (Together.ai)
-   - Layered collaborative processing
+   - stageed collaborative processing
    - Iterative refinement through multiple agents
    - https://arxiv.org/abs/2406.04692
 

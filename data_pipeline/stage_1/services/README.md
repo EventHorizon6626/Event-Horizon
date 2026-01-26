@@ -1,6 +1,6 @@
-## Services Layer
+## Services stage
 
-The services layer contains client interfaces for external data sources.
+The services stage contains client interfaces for external data sources.
 Each service is responsible for API communication and data fetching.
 
 ### Structure
@@ -36,4 +36,4 @@ services/
 1. Create service in appropriate subdirectory
 2. Implement client interface
 3. Add authentication and error handling
-4. Create corresponding agent in `layer_1/agents/`
+4. Create corresponding agent in `stage_1/agents/`

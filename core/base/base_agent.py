@@ -9,11 +9,11 @@ from typing import Any, Dict
 
 class BaseAgent(ABC):
     """
-    Base class for all Event Horizon agents across all layers
+    Base class for all Event Horizon agents across all stages
 
     Provides common execution framework, logging, and error handling.
-    Used by Layer 1 (Data Retrieval), Layer 2 (Normalization),
-    and Layer 3 (Feature Extraction) agents.
+    Used by Stage 1 (Data Retrieval), Stage 2 (Normalization),
+    and Stage 3 (Feature Extraction) agents.
     """
 
     def __init__(self, agent_name: str, config: Dict[str, Any] = None):

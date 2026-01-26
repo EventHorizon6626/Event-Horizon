@@ -590,7 +590,7 @@ Action: respond_to_user(...)
 - **Privacy Protection**: Redact sensitive information
 - **Factuality Checks**: Verify claims against sources
 
-**Implementation Layers**:
+**Implementation Stages**:
 1. **Pre-Processing**: Validate inputs before agent sees them
 2. **Runtime**: Monitor and constrain during execution
 3. **Post-Processing**: Validate outputs before user sees them
@@ -855,7 +855,7 @@ Real-world agentic systems typically combine multiple patterns. Here are proven 
 - Implement semantic routing
 
 ### 6. Prioritize Reliability
-- Error handling at every layer
+- Error handling at every stage
 - Graceful degradation
 - Retry mechanisms
 - Circuit breakers

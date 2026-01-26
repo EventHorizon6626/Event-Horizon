@@ -1,10 +1,10 @@
-# Migration Guide: Moving to Layer 1 Architecture
+# Migration Guide: Moving to Stage 1 Architecture
 
-This guide helps you migrate from the old agent system to the new Layer 1 architecture.
+This guide helps you migrate from the old agent system to the new Stage 1 architecture.
 
 ## What Changed?
 
-### Old Structure (Before Layer 1)
+### Old Structure (Before Stage 1)
 ```
 agents/
 ├── base_agent.py
@@ -15,9 +15,9 @@ agents/
 main.py - Sequential execution
 ```
 
-### New Structure (Layer 1)
+### New Structure (Stage 1)
 ```
-layer_1/
+stage_1/
 ├── agents/
 │   ├── base_agent.py
 │   ├── news_agent.py
@@ -26,18 +26,18 @@ layer_1/
 ├── models/
 │   └── schemas.py
 └── orchestrator/
-    └── layer_1_orchestrator.py
+    └── stage_1_orchestrator.py
 
-main_layer1.py - Parallel execution
+main_stage1.py - Parallel execution
 ```
 
 ## Key Improvements
 
-| Feature | Old System | Layer 1 |
+| Feature | Old System | Stage 1 |
 |---------|-----------|---------|
 | **Execution** | Sequential | Parallel |
 | **Speed** | ~15s for 3 agents | ~7s for 3 agents |
-| **Architecture** | Monolithic | Layered (3-layer vision) |
+| **Architecture** | Monolithic | Stageed (3-stage vision) |
 | **Data Format** | Mixed | Structured schemas |
 | **Error Handling** | All-or-nothing | Partial failures OK |
 | **Scalability** | Limited | Designed for 10+ agents |
@@ -55,9 +55,9 @@ from agents.chart_agent import ChartDataAgent
 
 **After:**
 ```python
-from layer_1.agents import NewsAgent, EarningsAgent, CandlestickAgent
+from stage_1.agents import NewsAgent, EarningsAgent, CandlestickAgent
 # Or use the orchestrator
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 ```
 
 ### Step 2: Replace Sequential Execution
@@ -78,7 +78,7 @@ chart_result = chart_agent.execute(portfolio)
 **After:**
 ```python
 # Parallel - fast
-orchestrator = Layer1Orchestrator(config={
+orchestrator = Stage1Orchestrator(config={
     "enabled_agents": ["news", "earnings", "candlestick"],
     "agent_configs": {
         "news": news_config,
@@ -88,16 +88,16 @@ orchestrator = Layer1Orchestrator(config={
 })
 
 result = orchestrator.execute(portfolio)
-layer1_output = result["layer1_output"]
+stage1_output = result["stage1_output"]
 ```
 
 ### Step 3: Update Agent Names
 
 | Old Name | New Name | Location |
 |----------|----------|----------|
-| `ChartDataAgent` | `CandlestickAgent` | `layer_1.agents` |
-| `ReportAnalysisAgent` | `EarningsAgent` | `layer_1.agents` |
-| `NewsAgent` | `NewsAgent` | `layer_1.agents` (same name) |
+| `ChartDataAgent` | `CandlestickAgent` | `stage_1.agents` |
+| `ReportAnalysisAgent` | `EarningsAgent` | `stage_1.agents` |
+| `NewsAgent` | `NewsAgent` | `stage_1.agents` (same name) |
 
 ### Step 4: Update Data Access
 
@@ -113,15 +113,15 @@ candles = chart_result["result"]["chart_data"]
 
 **After:**
 ```python
-# New format - unified Layer1Output
+# New format - unified Stage1Output
 result = orchestrator.execute(portfolio)
-layer1_output = result["layer1_output"]
+stage1_output = result["stage1_output"]
 
 # Access by symbol
-for symbol in layer1_output.symbols:
-    news_data = layer1_output.news_data[symbol]
-    chart_data = layer1_output.chart_data[symbol]
-    earnings_data = layer1_output.earnings_data[symbol]
+for symbol in stage1_output.symbols:
+    news_data = stage1_output.news_data[symbol]
+    chart_data = stage1_output.chart_data[symbol]
+    earnings_data = stage1_output.earnings_data[symbol]
 
     print(f"{symbol}:")
     print(f"  Articles: {news_data.total_articles}")
@@ -149,7 +149,7 @@ if result["status"] == "partial_success":
     print("Some agents succeeded, some failed")
 
 # Check individual data
-for symbol, data in result["layer1_output"].news_data.items():
+for symbol, data in result["stage1_output"].news_data.items():
     if data.error:
         print(f"{symbol} news failed: {data.error}")
     else:
@@ -167,7 +167,7 @@ news_agent = NewsAgent()
 result = news_agent.execute(portfolio)
 ```
 
-However, **new code should use Layer 1** for:
+However, **new code should use Stage 1** for:
 - Better performance (parallel execution)
 - Structured data schemas
 - Future-proof architecture
@@ -190,10 +190,10 @@ agents:
       include_financials: true
 ```
 
-### New Config (Layer 1)
+### New Config (Stage 1)
 
 ```python
-layer1_config = {
+stage1_config = {
     "enabled_agents": ["news", "earnings", "candlestick"],
     "max_workers": 3,
     "agent_configs": {
@@ -224,8 +224,8 @@ python main.py
 ### New Way
 
 ```bash
-# Parallel Layer 1 execution
-python main_layer1.py
+# Parallel Stage 1 execution
+python main_stage1.py
 ```
 
 ## Common Pitfalls
@@ -234,12 +234,12 @@ python main_layer1.py
 
 ❌ **Wrong:**
 ```python
-from layer_1.agents import ChartDataAgent  # Old name
+from stage_1.agents import ChartDataAgent  # Old name
 ```
 
 ✅ **Correct:**
 ```python
-from layer_1.agents import CandlestickAgent  # New name
+from stage_1.agents import CandlestickAgent  # New name
 ```
 
 ### 2. Direct Agent Instantiation
@@ -254,7 +254,7 @@ result = agent.execute(portfolio)
 ✅ **Recommended:**
 ```python
 # Use orchestrator for parallel execution
-orchestrator = Layer1Orchestrator()
+orchestrator = Stage1Orchestrator()
 result = orchestrator.execute(portfolio)
 ```
 
@@ -268,16 +268,16 @@ articles = result["result"]["news_by_stock"]
 
 ✅ **Correct:**
 ```python
-# New Layer1Output format
-layer1_output = result["layer1_output"]
-articles = layer1_output.news_data
+# New Stage1Output format
+stage1_output = result["stage1_output"]
+articles = stage1_output.news_data
 ```
 
 ## Performance Comparison
 
 ### Benchmark: 4 Stocks, 3 Agents
 
-| Metric | Old System | Layer 1 | Improvement |
+| Metric | Old System | Stage 1 | Improvement |
 |--------|-----------|---------|-------------|
 | **Total Time** | 15.2s | 7.1s | **2.1x faster** |
 | **News Agent** | 3.1s | 3.1s | Same |
@@ -289,35 +289,35 @@ Time savings come from parallel execution, not individual agent speed.
 
 ## Feature Comparison
 
-| Feature | Old System | Layer 1 | Notes |
+| Feature | Old System | Stage 1 | Notes |
 |---------|-----------|---------|-------|
 | Parallel execution | ❌ | ✅ | ThreadPoolExecutor |
 | Structured schemas | ❌ | ✅ | Dataclass models |
 | Partial failures | ❌ | ✅ | Continue on error |
-| Unified output | ❌ | ✅ | Layer1Output |
-| Future-ready | ❌ | ✅ | Supports Layer 2/3 |
+| Unified output | ❌ | ✅ | Stage1Output |
+| Future-ready | ❌ | ✅ | Supports Stage 2/3 |
 | Config flexibility | ⚠️ | ✅ | Per-agent config |
 | Error tracking | ⚠️ | ✅ | Per-agent, per-symbol |
 
 ## Timeline
 
 - **Now**: Both systems work (backward compatible)
-- **Recommended**: Start using Layer 1 for new code
-- **Future**: Layer 2 and Layer 3 will build on Layer 1
+- **Recommended**: Start using Stage 1 for new code
+- **Future**: Stage 2 and Stage 3 will build on Stage 1
 
 ## Need Help?
 
-- See [Layer 1 Guide](./layer-1-guide.md) for detailed documentation
-- Check [examples/](../../layer_1/examples/) for sample code
-- Review [main_layer1.py](../../main_layer1.py) for working example
+- See [Stage 1 Guide](./stage-1-guide.md) for detailed documentation
+- Check [examples/](../../stage_1/examples/) for sample code
+- Review [main_stage1.py](../../main_stage1.py) for working example
 
 ## Summary
 
-**To migrate to Layer 1:**
+**To migrate to Stage 1:**
 
-1. Replace `from agents` with `from layer_1.agents`
-2. Use `Layer1Orchestrator` instead of sequential agent calls
-3. Update result access to use `Layer1Output` structure
+1. Replace `from agents` with `from stage_1.agents`
+2. Use `Stage1Orchestrator` instead of sequential agent calls
+3. Update result access to use `Stage1Output` structure
 4. Rename `ChartDataAgent` → `CandlestickAgent`
 5. Rename `ReportAnalysisAgent` → `EarningsAgent`
 
@@ -325,4 +325,4 @@ Time savings come from parallel execution, not individual agent speed.
 - 2x faster execution (parallel agents)
 - Better error handling (partial failures)
 - Structured data schemas
-- Future-proof for Layer 2 and Layer 3
+- Future-proof for Stage 2 and Stage 3

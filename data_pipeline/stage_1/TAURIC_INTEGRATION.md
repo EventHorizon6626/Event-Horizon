@@ -1,26 +1,26 @@
-# Tauric Research Integration - Layer 1 Data Retrieval
+# Tauric Research Integration - Stage 1 Data Retrieval
 
-This document describes the integration of **data retrieval patterns** from Tauric Research's TradingAgents framework into Event Horizon's Layer 1.
+This document describes the integration of **data retrieval patterns** from Tauric Research's TradingAgents framework into Event Horizon's Stage 1.
 
 ## Overview
 
-Event Horizon Layer 1 has been enhanced with **data tools** inspired by the [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) framework.
+Event Horizon Stage 1 has been enhanced with **data tools** inspired by the [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) framework.
 
-**Important**: Layer 1 is **ONLY** for data retrieval (market data, news, fundamentals, technicals, etc.). The Tauric analyst/researcher/trader/risk management multi-agent system will be implemented separately as described in `docs/architecture/multi-agent-architecture.md`.
+**Important**: Stage 1 is **ONLY** for data retrieval (market data, news, fundamentals, technicals, etc.). The Tauric analyst/researcher/trader/risk management multi-agent system will be implemented separately as described in `docs/architecture/multi-agent-architecture.md`.
 
 ## What Was Added
 
 ### 1. New Agents
 
 #### Technical Indicators Agent
-- **Location**: `layer_1/agents/technical_agent.py`
+- **Location**: `stage_1/agents/technical_agent.py`
 - **Purpose**: Calculate technical indicators for stocks
 - **Indicators**: SMA, EMA, RSI, MACD
 - **Data Source**: Yahoo Finance via yfinance
 - **Inspired by**: Tauric's `technical_indicators_tools.py`
 
 #### Fundamentals Analysis Agent
-- **Location**: `layer_1/agents/fundamentals_agent.py`
+- **Location**: `stage_1/agents/fundamentals_agent.py`
 - **Purpose**: Retrieve fundamental metrics and financial ratios
 - **Metrics**: P/E, ROE, ROA, Debt/Equity, Profit Margins, etc.
 - **Data Source**: Yahoo Finance via yfinance
@@ -29,7 +29,7 @@ Event Horizon Layer 1 has been enhanced with **data tools** inspired by the [Tau
 ### 2. Utility Tools
 
 #### Stock Data Tools
-- **Location**: `layer_1/agents/utils/stock_tools.py`
+- **Location**: `stage_1/agents/utils/stock_tools.py`
 - **Functions**:
   - `get_stock_data()`: Retrieve OHLCV data for date ranges
   - `get_indicators()`: Calculate technical indicators
@@ -38,16 +38,16 @@ Event Horizon Layer 1 has been enhanced with **data tools** inspired by the [Tau
 
 ### 3. Updated Schemas
 
-Added new data models in `layer_1/models/schemas.py`:
+Added new data models in `stage_1/models/schemas.py`:
 - `TechnicalData`: Schema for technical indicator outputs
 - `FundamentalsData`: Schema for fundamental metrics outputs
 
 ### 4. Enhanced Orchestrator
 
-Updated `layer_1/orchestrator/layer_1_orchestrator.py`:
+Updated `stage_1/orchestrator/stage_1_orchestrator.py`:
 - Support for `technical` and `fundamentals` agents
 - Parallel execution of all 5 agents
-- Aggregation of new data types into `Layer1Output`
+- Aggregation of new data types into `Stage1Output`
 
 ## Key Differences
 
@@ -81,9 +81,9 @@ TradingAgentsGraph
   └─ Risk Management Team
 ```
 
-### Event Horizon Layer 1 (Enhanced)
+### Event Horizon Stage 1 (Enhanced)
 ```
-Layer1Orchestrator
+Stage1Orchestrator
   ├─ CandlestickAgent (OHLCV data)
   ├─ EarningsAgent (financial reports)
   ├─ NewsAgent (news articles)
@@ -94,7 +94,7 @@ Layer1Orchestrator
 ## Usage Example
 
 ```python
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 
 # Configure with all agents including Tauric-inspired ones
 config = {
@@ -115,23 +115,23 @@ config = {
     }
 }
 
-orchestrator = Layer1Orchestrator(config=config)
+orchestrator = Stage1Orchestrator(config=config)
 result = orchestrator.execute(["AAPL", "TSLA", "NVDA"])
 
 # Access all data types
-layer1_output = result["layer1_output"]
-print(layer1_output.chart_data)        # OHLCV candles
-print(layer1_output.technical_data)    # Technical indicators
-print(layer1_output.fundamentals_data) # Fundamental metrics
+Stage1_output = result["Stage1_output"]
+print(Stage1_output.chart_data)        # OHLCV candles
+print(Stage1_output.technical_data)    # Technical indicators
+print(Stage1_output.fundamentals_data) # Fundamental metrics
 ```
 
 ## Benefits of Integration
 
-1. **Comprehensive Data**: Layer 1 now retrieves all data types needed for analysis
+1. **Comprehensive Data**: Stage 1 now retrieves all data types needed for analysis
 2. **Proven Patterns**: Leverages Tauric's battle-tested data tools
 3. **Modularity**: Maintains our clean agent architecture
 4. **Extensibility**: Easy to add more Tauric-inspired agents
-5. **Compatibility**: Works with existing Layer 1 code
+5. **Compatibility**: Works with existing Stage 1 code
 
 ## Future Enhancements
 
@@ -148,9 +148,9 @@ Potential additions from Tauric:
 - **Paper**: [TradingAgents: Multi-Agents LLM Financial Trading Framework](https://arxiv.org/abs/2412.20138)
 - **Cloned to**: `core_refs/TradingAgents/`
 
-## What's NOT in Layer 1
+## What's NOT in Stage 1
 
-The following Tauric components are **NOT** part of Layer 1 and will be implemented in a separate Financial Analysis Multi-Agent System:
+The following Tauric components are **NOT** part of Stage 1 and will be implemented in a separate Financial Analysis Multi-Agent System:
 
 ### Not Included (Future Implementation)
 - ❌ Analyst Agents (fundamentals_analyst, market_analyst, news_analyst, social_media_analyst)
@@ -160,17 +160,17 @@ The following Tauric components are **NOT** part of Layer 1 and will be implemen
 - ❌ LangGraph workflow orchestration
 - ❌ Multi-agent debate and consensus mechanisms
 
-These will be built as a **separate system** that consumes the output from Layer 3 (feature-extracted data). See `docs/architecture/multi-agent-architecture.md` for details.
+These will be built as a **separate system** that consumes the output from Stage 3 (feature-extracted data). See `docs/architecture/multi-agent-architecture.md` for details.
 
 ### Clear Separation
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│           DATA PROCESSING PIPELINE (This Layer)            │
+│           DATA PROCESSING PIPELINE (This Stage)            │
 ├─────────────────────────────────────────────────────────────┤
-│  Layer 1: Data Retrieval (candlestick, news, technical)   │
-│  Layer 2: Normalization                                    │
-│  Layer 3: Feature Extraction                               │
+│  Stage 1: Data Retrieval (candlestick, news, technical)   │
+│  Stage 2: Normalization                                    │
+│  Stage 3: Feature Extraction                               │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -180,7 +180,7 @@ These will be built as a **separate system** that consumes the output from Layer
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Layer 1's job: **Get the data**
+Stage 1's job: **Get the data**
 Financial Analysis System's job: **Make trading decisions**
 
 ## Credits

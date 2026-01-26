@@ -1,8 +1,8 @@
 """
-Fundamentals Analysis Agent (Layer 1)
+Fundamentals Analysis Agent (Stage 1)
 
 Retrieves fundamental data and financial metrics for stocks.
-Part of Layer 1: Data Retrieval - Fundamental Data category.
+Part of Stage 1: Data Retrieval - Fundamental Data category.
 """
 
 import logging
@@ -16,7 +16,7 @@ from data_pipeline.stage_1.models.schemas import FundamentalsData
 
 class FundamentalsAgent(BaseAgent):
     """
-    Layer 1 Agent: Fundamental Data Retrieval
+    Stage 1 Agent: Fundamental Data Retrieval
 
     Specialization: Company fundamentals, financial metrics, valuation ratios
     Data Sources: Yahoo Finance via yfinance

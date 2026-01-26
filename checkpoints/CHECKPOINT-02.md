@@ -80,7 +80,7 @@ Full Analysis:  ~4-15s (5 agents)
 
 ### 4. Request Body Format
 **Problem**: BE sending `{stocks: [...]}`, AI expects `{portfolio: [...]}`
-**Solution**: Transform request in BE proxy layer
+**Solution**: Transform request in BE proxy stage
 **Impact**: AI properly parsing requests
 
 ### 5. Response Structure Alignment
@@ -241,7 +241,7 @@ Stock Count | Agents | Time
 
 ### Best Practices Applied
 1. **Environment Variables**: Centralized config in `.env` files
-2. **Logging**: Comprehensive logging at all layers
+2. **Logging**: Comprehensive logging at all stages
 3. **Error Handling**: Graceful degradation with partial success
 4. **Documentation**: Multiple docs (API, Deployment, Quickstart)
 5. **Git Workflow**: Clear commit messages with scope prefixes

@@ -1,5 +1,5 @@
 """
-Stock Data Tools for Layer 1
+Stock Data Tools for Stage 1
 
 Utility functions for retrieving stock data, technical indicators, and fundamentals.
 Inspired by Tauric Research TradingAgents framework.

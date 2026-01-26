@@ -27,10 +27,10 @@ class Stage1Orchestrator:
     - Manages parallel execution of data retrieval agents
     - Aggregates results from all agents
     - Handles errors and partial failures
-    - Produces unified Layer 1 output
+    - Produces unified Stage 1 output
 
     Architecture Pattern: Parallel (Independent Agents)
-    - All Layer 1 agents run simultaneously
+    - All Stage 1 agents run simultaneously
     - No dependencies between agents
     - Maximum throughput and efficiency
     """
@@ -69,7 +69,7 @@ class Stage1Orchestrator:
         self, portfolio: Union[Dict[str, Any], List[str]]
     ) -> Dict[str, Any]:
         """
-        Execute Layer 1 data retrieval for a portfolio
+        Execute Stage 1 data retrieval for a portfolio
 
         Args:
             portfolio: Either:
@@ -95,7 +95,7 @@ class Stage1Orchestrator:
             raise ValueError("No symbols provided in portfolio")
 
         self.logger.info(
-            f"Starting Layer 1 data retrieval for portfolio {portfolio_id}"
+            f"Starting Stage 1 data retrieval for portfolio {portfolio_id}"
         )
         self.logger.info(f"Symbols: {symbols}")
         self.logger.info(f"Enabled agents: {self.enabled_agents}")
@@ -178,7 +178,7 @@ class Stage1Orchestrator:
             stage1_output.status = "success"
 
         self.logger.info(
-            f"Layer 1 execution completed in {stage1_output.execution_time_seconds:.2f}s"
+            f"Stage 1 execution completed in {stage1_output.execution_time_seconds:.2f}s"
         )
         self.logger.info(f"Status: {stage1_output.status}")
         self.logger.info(f"Agents executed: {agents_executed}")

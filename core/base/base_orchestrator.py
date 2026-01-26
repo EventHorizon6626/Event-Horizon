@@ -1,4 +1,4 @@
-"""Base Orchestrator Class for Event Horizon Multi-Layer System"""
+"""Base Orchestrator Class for Event Horizon Multi-Stage System"""
 
 import logging
 from abc import ABC, abstractmethod
@@ -7,43 +7,43 @@ from typing import Any, Dict, List
 
 class BaseOrchestrator(ABC):
     """
-    Base class for all layer orchestrators
+    Base class for all stage orchestrators
 
-    Provides common orchestration framework for managing agents within a layer.
-    Used by Layer 1, Layer 2, and Layer 3 orchestrators.
+    Provides common orchestration framework for managing agents within a stage.
+    Used by Stage 1, Stage 2, and Stage 3 orchestrators.
     """
 
-    def __init__(self, layer_name: str, config: Dict[str, Any] = None):
+    def __init__(self, stage_name: str, config: Dict[str, Any] = None):
         """
         Initialize base orchestrator
 
         Args:
-            layer_name: Name of the layer (e.g., "layer_1", "layer_2")
+            stage_name: Name of the stage (e.g., "stage_1", "stage_2")
             config: Optional configuration dictionary
         """
-        self.layer_name = layer_name
+        self.stage_name = stage_name
         self.config = config or {}
-        self.logger = logging.getLogger(f"orchestrator.{layer_name}")
+        self.logger = logging.getLogger(f"orchestrator.{stage_name}")
 
         self.enabled_agents = self.config.get("enabled_agents", [])
         self.max_workers = self.config.get("max_workers", 5)
         self.agent_configs = self.config.get("agent_configs", {})
 
         self.logger.info(
-            f"Initialized {layer_name} orchestrator: "
+            f"Initialized {stage_name} orchestrator: "
             f"enabled_agents={self.enabled_agents}, max_workers={self.max_workers}"
         )
 
     @abstractmethod
     def execute(self, input_data: Any) -> Dict[str, Any]:
         """
-        Execute the layer's processing pipeline
+        Execute the stage's processing pipeline
 
         Args:
-            input_data: Input data for the layer
+            input_data: Input data for the stage
 
         Returns:
-            Dict containing layer output and metadata
+            Dict containing stage output and metadata
 
         Raises:
             NotImplementedError: If not implemented in subclass
@@ -67,7 +67,7 @@ class BaseOrchestrator(ABC):
             agents: List of agent names to enable
 
         Raises:
-            ValueError: If any agent name is invalid for this layer
+            ValueError: If any agent name is invalid for this stage
         """
         # Validation should be done in subclass
         self.enabled_agents = agents

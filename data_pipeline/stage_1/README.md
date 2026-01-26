@@ -1,14 +1,14 @@
-# Layer 1: Data Retrieval
+# Stage 1: Data Retrieval
 
-Layer 1 is the foundation of Event Horizon's three-layer architecture, responsible for collecting heterogeneous data from multiple sources.
+Stage 1 is the foundation of Event Horizon's three-stage architecture, responsible for collecting heterogeneous data from multiple sources.
 
 ## Quick Start
 
 ```python
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 
 # Configure and execute
-orchestrator = Layer1Orchestrator(config={
+orchestrator = Stage1Orchestrator(config={
     "enabled_agents": ["candlestick", "earnings", "news"],
     "agent_configs": {
         "candlestick": {"period": "1mo", "interval": "1d"},
@@ -23,7 +23,7 @@ result = orchestrator.execute(["AAPL", "TSLA", "SPY"])
 ## Directory Structure
 
 ```
-layer_1/
+stage_1/
 ├── agents/                      # Data retrieval agents
 │   ├── base_agent.py           # Base class for all agents
 │   ├── candlestick_agent.py    # OHLCV price data
@@ -34,7 +34,7 @@ layer_1/
 │   └── schemas.py              # Output data models
 │
 ├── orchestrator/                # Coordination logic
-│   └── layer_1_orchestrator.py # Parallel execution manager
+│   └── stage_1_orchestrator.py # Parallel execution manager
 │
 └── __init__.py
 ```
@@ -92,9 +92,9 @@ Each agent:
 
 ### 3. Heterogeneous Output
 Data remains in agent-specific formats:
-- No normalization at this layer
+- No normalization at this stage
 - Raw data for maximum flexibility
-- Layer 2 handles standardization
+- Stage 2 handles standardization
 
 ### 4. Error Resilience
 Supports partial failures:
@@ -107,15 +107,15 @@ Supports partial failures:
 ### Basic Execution
 
 ```python
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 
-orchestrator = Layer1Orchestrator()
+orchestrator = Stage1Orchestrator()
 result = orchestrator.execute(["AAPL", "TSLA"])
 
 # Access data
-layer1_output = result["layer1_output"]
-print(layer1_output.chart_data["AAPL"])
-print(layer1_output.earnings_data["TSLA"])
+stage1_output = result["stage1_output"]
+print(stage1_output.chart_data["AAPL"])
+print(stage1_output.earnings_data["TSLA"])
 ```
 
 ### Custom Configuration
@@ -137,7 +137,7 @@ config = {
     }
 }
 
-orchestrator = Layer1Orchestrator(config=config)
+orchestrator = Stage1Orchestrator(config=config)
 result = orchestrator.execute({
     "portfolio_id": "my_portfolio",
     "portfolio": ["NVDA", "AMD"]
@@ -154,17 +154,17 @@ if result["status"] == "partial_success":
     print(f"Errors: {result['errors']}")
 
 # Check individual symbol errors
-for symbol, data in result["layer1_output"].chart_data.items():
+for symbol, data in result["stage1_output"].chart_data.items():
     if data.error:
         print(f"{symbol} failed: {data.error}")
 ```
 
 ## Output Schema
 
-### Layer1Output
+### Stage1Output
 
 ```python
-Layer1Output(
+Stage1Output(
     portfolio_id: str,
     symbols: List[str],
 
@@ -205,7 +205,7 @@ See `models/schemas.py` for complete schemas.
 | Configuration | Time | Notes |
 |--------------|------|-------|
 | Sequential | ~15s | Old approach |
-| Parallel (3 agents) | ~7s | Layer 1 orchestrator |
+| Parallel (3 agents) | ~7s | Stage 1 orchestrator |
 | Parallel (5 workers) | ~6s | Increased parallelism |
 
 ### Optimization Tips
@@ -213,7 +213,7 @@ See `models/schemas.py` for complete schemas.
 1. **Disable unused agents**: Only enable what you need
 2. **Adjust time windows**: Smaller periods = faster
 3. **Increase workers**: For many agents (diminishing returns after 5)
-4. **Cache results**: Save Layer1Output to avoid redundant calls
+4. **Cache results**: Save Stage1Output to avoid redundant calls
 
 ## Integration
 
@@ -221,20 +221,20 @@ See `models/schemas.py` for complete schemas.
 
 ```python
 # main.py
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 
-orchestrator = Layer1Orchestrator(config=load_config())
-layer1_result = orchestrator.execute(portfolio)
+orchestrator = Stage1Orchestrator(config=load_config())
+stage1_result = orchestrator.execute(portfolio)
 
-# Pass to Layer 2 (future)
-layer2_result = normalize_data(layer1_result["layer1_output"])
+# Pass to Stage 2 (future)
+stage2_result = normalize_data(stage1_result["stage1_output"])
 ```
 
 ### Standalone Usage
 
 ```bash
-# Run Layer 1 example script
-python main_layer1.py
+# Run Stage 1 example script
+python main_stage1.py
 ```
 
 ## Development
@@ -243,7 +243,7 @@ python main_layer1.py
 
 1. Create agent class in `agents/`:
 ```python
-from layer_1.agents.base_agent import BaseAgent
+from stage_1.agents.base_agent import BaseAgent
 
 class MyAgent(BaseAgent):
     def _execute_internal(self, input_data):
@@ -252,35 +252,35 @@ class MyAgent(BaseAgent):
 ```
 
 2. Add schema in `models/schemas.py`
-3. Register in `orchestrator/layer_1_orchestrator.py`
+3. Register in `orchestrator/stage_1_orchestrator.py`
 4. Update `__init__.py` exports
 
-See [Layer 1 Guide](../docs/guides/layer-1-guide.md) for detailed instructions.
+See [Stage 1 Guide](../docs/guides/stage-1-guide.md) for detailed instructions.
 
 ## Architecture Context
 
 ```
-Layer 1 (Current)
+Stage 1 (Current)
     ↓
-Layer 2 (Future) - Normalization
+Stage 2 (Future) - Normalization
     ↓
-Layer 3 (Future) - Feature Extraction
+Stage 3 (Future) - Feature Extraction
     ↓
 Trading Signals
 ```
 
-Layer 1 focuses solely on data retrieval. Future layers will handle:
-- **Layer 2**: Normalize heterogeneous data into unified "DNA" schema
-- **Layer 3**: Extract features using LLM/Neural AI
+Stage 1 focuses solely on data retrieval. Future stages will handle:
+- **Stage 2**: Normalize heterogeneous data into unified "DNA" schema
+- **Stage 3**: Extract features using LLM/Neural AI
 
 ## Documentation
 
-- [Layer 1 Guide](../docs/guides/layer-1-guide.md) - Comprehensive usage guide
+- [Stage 1 Guide](../docs/guides/stage-1-guide.md) - Comprehensive usage guide
 - [Multi-Agent Design](../docs/architecture/multi-agent-design.md) - Architecture overview
 - [Core References](../docs/core-refs/README.md) - Research and inspiration
 
 ## See Also
 
-- [Services Layer](../services/README.md) - External API clients
+- [Services Stage](../services/README.md) - External API clients
 - [Configuration Guide](../docs/guides/configuration.md) - Config options
 - [Data Sources](../docs/guides/data-sources.md) - Supported APIs

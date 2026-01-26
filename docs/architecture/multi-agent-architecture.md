@@ -167,31 +167,31 @@ Stage 1 is responsible for **heterogeneous data retrieval** from multiple extern
 
 ### Quick Links
 
-- 📚 [Quick Start Guide](../../QUICKSTART_LAYER1.md)
-- 🔧 [Tauric Integration Details](../../layer_1/TAURIC_INTEGRATION.md)
-- 📝 [Update Summary](../../LAYER1_UPDATE_SUMMARY.md)
+- 📚 [Quick Start Guide](../../QUICKSTART_STAGE1.md)
+- 🔧 [Tauric Integration Details](../../stage_1/TAURIC_INTEGRATION.md)
+- 📝 [Update Summary](../../STAGE1_UPDATE_SUMMARY.md)
 
-**Note**: The codebase uses `layer_1/` directory naming, which refers to Stage 1 of the Data Processing Pipeline.
+**Note**: The codebase uses `stage_1/` directory naming, which refers to Stage 1 of the Data Processing Pipeline.
 
 ### Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                      APPLICATION LAYER                                  │
-│                      main_layer1.py                                     │
+│                      APPLICATION STAGE                                  │
+│                      main_stage1.py                                     │
 │  • Configuration setup                                                 │
 │  • Result display                                                      │
 │  • Output persistence                                                  │
 └────────────────────────────────────────────────────────────────────────┘
                                 ↓
 ┌────────────────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATION LAYER                                  │
-│               layer_1/orchestrator/layer_1_orchestrator.py             │
+│                    ORCHESTRATION STAGE                                  │
+│               stage_1/orchestrator/stage_1_orchestrator.py             │
 │                                                                         │
-│  Layer1Orchestrator:                                                   │
+│  Stage1Orchestrator:                                                   │
 │  • Parallel execution (ThreadPoolExecutor, 5 workers)                  │
 │  • Agent lifecycle management                                          │
-│  • Result aggregation into Layer1Output                                │
+│  • Result aggregation into Stage1Output                                │
 │  • Error handling and status tracking                                  │
 └────────────────────────────────────────────────────────────────────────┘
       │            │           │           │           │
@@ -221,8 +221,8 @@ Stage 1 is responsible for **heterogeneous data retrieval** from multiple extern
 ### Directory Structure
 
 ```
-layer_1/
-├── __init__.py                 # Layer 1 exports
+stage_1/
+├── __init__.py                 # Stage 1 exports
 ├── agents/                     # Data retrieval agents
 │   ├── __init__.py
 │   ├── candlestick_agent.py   # OHLCV price data
@@ -232,7 +232,7 @@ layer_1/
 │   ├── fundamentals_agent.py  # Fundamental metrics (Tauric)
 │   └── utils/
 │       └── stock_tools.py     # Utility functions (Tauric)
-├── services/                   # API client layer
+├── services/                   # API client stage
 │   ├── __init__.py
 │   ├── chart_data_client.py   # Yahoo Finance charts
 │   ├── massive_chart_client.py # Massive.com alternative
@@ -240,10 +240,10 @@ layer_1/
 │   └── news_api_client.py     # NewsAPI client
 ├── models/                     # Data schemas
 │   ├── __init__.py
-│   └── schemas.py             # Layer1Output and data classes
+│   └── schemas.py             # Stage1Output and data classes
 ├── orchestrator/               # Parallel execution
 │   ├── __init__.py
-│   └── layer_1_orchestrator.py # Layer1Orchestrator class
+│   └── stage_1_orchestrator.py # Stage1Orchestrator class
 └── TAURIC_INTEGRATION.md      # Integration details
 ```
 
@@ -253,7 +253,7 @@ layer_1/
 
 **Purpose**: Retrieve OHLCV (Open, High, Low, Close, Volume) price data
 
-**File**: `layer_1/agents/candlestick_agent.py`
+**File**: `stage_1/agents/candlestick_agent.py`
 
 **Data Sources**:
 - Primary: Yahoo Finance
@@ -275,7 +275,7 @@ layer_1/
 
 **Purpose**: Retrieve financial reports and earnings data
 
-**File**: `layer_1/agents/earnings_agent.py`
+**File**: `stage_1/agents/earnings_agent.py`
 
 **Data Source**: Yahoo Finance
 
@@ -294,7 +294,7 @@ layer_1/
 
 **Purpose**: Retrieve news articles about stocks
 
-**File**: `layer_1/agents/news_agent.py`
+**File**: `stage_1/agents/news_agent.py`
 
 **Data Source**: NewsAPI (requires API key)
 
@@ -313,7 +313,7 @@ layer_1/
 
 **Purpose**: Calculate technical indicators
 
-**File**: `layer_1/agents/technical_agent.py`
+**File**: `stage_1/agents/technical_agent.py`
 
 **Data Source**: Yahoo Finance via yfinance
 
@@ -338,7 +338,7 @@ layer_1/
 
 **Purpose**: Retrieve fundamental metrics and financial ratios
 
-**File**: `layer_1/agents/fundamentals_agent.py`
+**File**: `stage_1/agents/fundamentals_agent.py`
 
 **Data Source**: Yahoo Finance via yfinance
 
@@ -363,7 +363,7 @@ layer_1/
 ### Usage Example
 
 ```python
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 
 # Configure orchestrator
 config = {
@@ -383,13 +383,13 @@ config = {
 }
 
 # Execute
-orchestrator = Layer1Orchestrator(config=config)
+orchestrator = Stage1Orchestrator(config=config)
 result = orchestrator.execute(["AAPL", "TSLA", "NVDA"])
 
 # Access data
-layer1_output = result["layer1_output"]
-print(layer1_output.chart_data["AAPL"].candles)
-print(layer1_output.technical_data["AAPL"].indicators["RSI"])
+stage1_output = result["stage1_output"]
+print(stage1_output.chart_data["AAPL"].candles)
+print(stage1_output.technical_data["AAPL"].indicators["RSI"])
 ```
 
 ### Performance
@@ -766,7 +766,7 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
 **Data Processing Pipeline (System 1)**:
 - ✅ Technical indicator calculation tools (Stage 1)
 - ✅ Fundamental metrics retrieval patterns (Stage 1)
-- ✅ Stock data utility functions (`layer_1/agents/utils/stock_tools.py`)
+- ✅ Stock data utility functions (`stage_1/agents/utils/stock_tools.py`)
 - ✅ Multi-source data collection approach
 
 **Decision-Making System (System 2)** ⏳:
@@ -882,9 +882,9 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: DECISION-MAKING SYSTEM
 
 ## References
 
-- **Quick Start**: `QUICKSTART_LAYER1.md`
-- **Tauric Integration**: `layer_1/TAURIC_INTEGRATION.md`
-- **Update Summary**: `LAYER1_UPDATE_SUMMARY.md`
+- **Quick Start**: `QUICKSTART_STAGE1.md`
+- **Tauric Integration**: `stage_1/TAURIC_INTEGRATION.md`
+- **Update Summary**: `STAGE1_UPDATE_SUMMARY.md`
 - **Tauric Codebase**: `core_refs/TradingAgents/`
 
 ---

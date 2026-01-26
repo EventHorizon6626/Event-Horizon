@@ -1,7 +1,7 @@
 """
-Layer 1 Agent Utilities
+Stage 1 Agent Utilities
 
-Utility functions and tools for Layer 1 agents.
+Utility functions and tools for Stage 1 agents.
 Includes data retrieval tools inspired by Tauric Research TradingAgents.
 """
 

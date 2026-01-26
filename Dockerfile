@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (for layer caching)
+# Copy requirements first (for stage caching)
 COPY requirements.txt .
 
 # Install Python dependencies
