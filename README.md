@@ -2,7 +2,7 @@
 
 Multi-agent trading system with two integrated systems:
 1. **Data Processing Pipeline** - Transforms raw market data into feature vectors (3 stages)
-2. **Decision-Making System** - Makes trading decisions from feature vectors (4 teams)
+2. **analyzer-Making System** - Makes trading decisions from feature vectors (4 teams)
 
 ---
 
@@ -41,7 +41,7 @@ python main_stage1.py
 ╚═══════════════════════════════════════════════════════════════════╝
                               ↓
 ╔═══════════════════════════════════════════════════════════════════╗
-║                 SYSTEM 2: DECISION-MAKING SYSTEM                   ║
+║                 SYSTEM 2: analyzer-MAKING SYSTEM                   ║
 ╠═══════════════════════════════════════════════════════════════════╣
 ║  Team 1: Analyst Team       [PLANNED]                              ║
 ║    4 analysts run in parallel                                      ║
@@ -53,7 +53,7 @@ python main_stage1.py
 ║    Position sizing debate                                          ║
 ║                    ↓                                                ║
 ║  Team 4: Trader Agent       [PLANNED]                              ║
-║    Final decision & execution                                      ║
+║    Final analyzer & execution                                      ║
 ╚═══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -72,7 +72,7 @@ Event-Horizon-AI/
 │   ├── stage_2/                # Normalization [PLANNED]
 │   └── stage_3/                # Feature Extraction [PLANNED]
 │
-├── decision_system/            # System 2: Decision-Making [PLANNED]
+├── decision_system/            # System 2: analyzer-Making [PLANNED]
 │   ├── team_1_analysts/        # Multi-perspective analysis
 │   ├── team_2_researchers/     # Bull/Bear debate
 │   ├── team_3_risk/            # Position sizing
@@ -111,7 +111,7 @@ Currently implemented agents in `data_pipeline/stage_1/agents/`:
 ### Python API
 
 ```python
-from data_pipeline import Stage1Orchestrator
+from event_horizon.data_pipeline import Stage1Orchestrator
 
 config = {
     "enabled_agents": ["candlestick", "earnings", "news", "technical", "fundamentals"],

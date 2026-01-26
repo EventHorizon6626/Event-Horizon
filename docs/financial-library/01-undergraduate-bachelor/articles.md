@@ -53,7 +53,7 @@ Foundational academic papers and accessible articles for building financial lite
 
 ## 💡 Behavioral Finance & Psychology
 
-### 5. **"Prospect Theory: An Analysis of Decision under Risk"** (1979)
+### 5. **"Prospect Theory: An Analysis of analyzer under Risk"** (1979)
 - **Authors**: Daniel Kahneman, Amos Tversky
 - **Journal**: Econometrica
 - **Topics**: Loss aversion, framing effects, risk preferences

@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from data_pipeline import Stage1Orchestrator
+from event_horizon.data_pipeline import Stage1Orchestrator
 
 # Load environment variables
 load_dotenv()

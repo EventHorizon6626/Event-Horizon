@@ -146,7 +146,7 @@ Essential textbooks and foundational readings for building core financial knowle
 - **Author**: Daniel Kahneman (Nobel Prize winner)
 - **Edition**: 2011
 - **Level**: Beginner
-- **Topics**: Cognitive biases, decision-making, heuristics
+- **Topics**: Cognitive biases, analyzer-making, heuristics
 - **Why Read**: Understand how your brain makes (bad) financial decisions
 - **Where to Buy**: Amazon, Farrar, Straus and Giroux
 - **Price**: ~$15-20
