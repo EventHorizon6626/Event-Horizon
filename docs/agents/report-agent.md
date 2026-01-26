@@ -218,7 +218,7 @@ Portfolio Input → Security Type Detection → Report Fetching → Data Formatt
 
 ### Phase 2: Enhanced Features
 1. Add Financial Modeling Prep as alternative data source
-2. Implement caching layer (24-hour cache for reports)
+2. Implement caching stage (24-hour cache for reports)
 3. Add SEC EDGAR direct access for official filings
 4. Parallel processing for multiple symbols
 5. Add earnings call transcripts (from third-party providers)

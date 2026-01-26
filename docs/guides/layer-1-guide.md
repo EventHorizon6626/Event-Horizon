@@ -1,14 +1,14 @@
-# Layer 1: Data Retrieval Guide
+# Stage 1: Data Retrieval Guide
 
 ## Overview
 
-Layer 1 is the foundation of Event Horizon's three-layer architecture. It handles **heterogeneous data collection** from multiple sources, with each agent specializing in one data source.
+Stage 1 is the foundation of Event Horizon's three-stage architecture. It handles **heterogeneous data collection** from multiple sources, with each agent specializing in one data source.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         LAYER 1: DATA RETRIEVAL                         │
+│                         STAGE 1: DATA RETRIEVAL                         │
 │                     (Heterogeneous Data Collection)                     │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
@@ -22,7 +22,7 @@ Layer 1 is the foundation of Event Horizon's three-layer architecture. It handle
 │                   Parallel, Independent Execution                       │
 │                              ↓  ↓  ↓                                    │
 │                                                                         │
-│              Layer1Output (Heterogeneous Data)                          │
+│              Stage1Output (Heterogeneous Data)                          │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -36,11 +36,11 @@ Layer 1 is the foundation of Event Horizon's three-layer architecture. It handle
 
 ## Components
 
-### Layer 1 Orchestrator
+### Stage 1 Orchestrator
 
 Manages parallel execution of all data retrieval agents.
 
-**Location**: `layer_1/orchestrator/layer_1_orchestrator.py`
+**Location**: `stage_1/orchestrator/stage_1_orchestrator.py`
 
 **Features**:
 - Parallel agent execution using ThreadPoolExecutor
@@ -147,7 +147,7 @@ NewsData(
 ### Basic Usage
 
 ```python
-from layer_1 import Layer1Orchestrator
+from stage_1 import Stage1Orchestrator
 
 # Configure orchestrator
 config = {
@@ -161,7 +161,7 @@ config = {
 }
 
 # Initialize orchestrator
-orchestrator = Layer1Orchestrator(config=config)
+orchestrator = Stage1Orchestrator(config=config)
 
 # Execute data retrieval
 portfolio = {
@@ -172,12 +172,12 @@ portfolio = {
 result = orchestrator.execute(portfolio)
 
 # Access results
-layer1_output = result["layer1_output"]
+stage1_output = result["stage1_output"]
 print(f"Status: {result['status']}")
 print(f"Execution time: {result['execution_time_seconds']:.2f}s")
 
 # Access specific data
-for symbol, chart_data in layer1_output.chart_data.items():
+for symbol, chart_data in stage1_output.chart_data.items():
     print(f"{symbol}: {len(chart_data.candles)} candles")
 ```
 
@@ -187,18 +187,18 @@ for symbol, chart_data in layer1_output.chart_data.items():
 # Set environment variables
 export NEWS_API_KEY=your_newsapi_key
 
-# Run Layer 1 example
-python main_layer1.py
+# Run Stage 1 example
+python main_stage1.py
 ```
 
 ## Output Format
 
-### Layer1Output
+### Stage1Output
 
-The complete output from Layer 1 execution:
+The complete output from Stage 1 execution:
 
 ```python
-Layer1Output(
+Stage1Output(
     portfolio_id: str,
     symbols: List[str],
 
@@ -225,16 +225,16 @@ Layer1Output(
 import json
 
 # Convert to dict
-output_dict = result["layer1_output"].to_dict()
+output_dict = result["stage1_output"].to_dict()
 
 # Save to file
-with open("layer1_output.json", "w") as f:
+with open("stage1_output.json", "w") as f:
     json.dump(output_dict, f, indent=2, default=str)
 ```
 
 ## Error Handling
 
-Layer 1 supports partial failures:
+Stage 1 supports partial failures:
 
 - **Success**: All agents completed successfully
 - **Partial Success**: Some agents succeeded, some failed
@@ -258,7 +258,7 @@ elif result["status"] == "partial_success":
 
 ### Parallel Execution
 
-All Layer 1 agents run in parallel using ThreadPoolExecutor:
+All Stage 1 agents run in parallel using ThreadPoolExecutor:
 
 ```python
 # Sequential (old way): 15s total
@@ -266,7 +266,7 @@ All Layer 1 agents run in parallel using ThreadPoolExecutor:
 # - Earnings: 7s
 # - News: 3s
 
-# Parallel (Layer 1): 7s total (max of individual times)
+# Parallel (Stage 1): 7s total (max of individual times)
 # All agents run simultaneously
 ```
 
@@ -285,11 +285,11 @@ config = {
 
 ### Step 1: Create Agent Class
 
-Create a new agent in `layer_1/agents/`:
+Create a new agent in `stage_1/agents/`:
 
 ```python
-from layer_1.agents.base_agent import BaseAgent
-from layer_1.models.schemas import OptionsFlowData
+from stage_1.agents.base_agent import BaseAgent
+from stage_1.models.schemas import OptionsFlowData
 
 class OptionsFlowAgent(BaseAgent):
     def __init__(self, config=None):
@@ -304,7 +304,7 @@ class OptionsFlowAgent(BaseAgent):
 
 ### Step 2: Add Output Schema
 
-Add schema to `layer_1/models/schemas.py`:
+Add schema to `stage_1/models/schemas.py`:
 
 ```python
 @dataclass
@@ -317,7 +317,7 @@ class OptionsFlowData:
 
 ### Step 3: Update Orchestrator
 
-Register in `layer_1/orchestrator/layer_1_orchestrator.py`:
+Register in `stage_1/orchestrator/stage_1_orchestrator.py`:
 
 ```python
 def _execute_single_agent(self, agent_name, input_data):
@@ -341,10 +341,10 @@ config = {
 
 ## Next Steps
 
-After Layer 1 retrieves heterogeneous data:
+After Stage 1 retrieves heterogeneous data:
 
-1. **Layer 2** (Future): Normalize and standardize data into unified "DNA" schema
-2. **Layer 3** (Future): Extract features using LLM/Neural AI for trading signals
+1. **Stage 2** (Future): Normalize and standardize data into unified "DNA" schema
+2. **Stage 3** (Future): Extract features using LLM/Neural AI for trading signals
 
 ## Troubleshooting
 
@@ -360,7 +360,7 @@ Increase timeout in agent configuration:
 
 ### API Rate Limits
 
-Layer 1 respects rate limits through service clients. Configure in services:
+Stage 1 respects rate limits through service clients. Configure in services:
 
 ```python
 # In services/news_api_client.py
@@ -372,7 +372,7 @@ rate_limit = RateLimiter(calls=100, period=60)
 Check individual agent errors:
 
 ```python
-for symbol, data in layer1_output.chart_data.items():
+for symbol, data in stage1_output.chart_data.items():
     if data.error:
         print(f"{symbol} failed: {data.error}")
 ```
@@ -381,8 +381,8 @@ for symbol, data in layer1_output.chart_data.items():
 
 1. **Enable only needed agents**: Don't fetch data you won't use
 2. **Use appropriate time windows**: Smaller periods = faster retrieval
-3. **Handle partial failures**: Layer 1 continues even if some agents fail
-4. **Cache results**: Save Layer1Output to avoid redundant API calls
+3. **Handle partial failures**: Stage 1 continues even if some agents fail
+4. **Cache results**: Save Stage1Output to avoid redundant API calls
 5. **Monitor execution time**: Track agent performance over time
 
 ## See Also

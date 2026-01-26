@@ -1,8 +1,8 @@
 """
-Candlestick Data Agent (Layer 1)
+Candlestick Data Agent (Stage 1)
 
 Retrieves OHLCV (candlestick) price data for stocks.
-Part of Layer 1: Data Retrieval - Price Data category.
+Part of Stage 1: Data Retrieval - Price Data category.
 """
 
 import logging
@@ -18,7 +18,7 @@ import os
 
 class CandlestickAgent(BaseAgent):
     """
-    Layer 1 Agent: Candlestick/OHLCV Data Retrieval
+    Stage 1 Agent: Candlestick/OHLCV Data Retrieval
 
     Specialization: Price data (Open, High, Low, Close, Volume)
     Data Sources: Yahoo Finance or Massive.com API

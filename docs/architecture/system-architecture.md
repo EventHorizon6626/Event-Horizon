@@ -262,7 +262,7 @@ GET  /docs                   # Swagger documentation
 
 ### 2. Backend as Gateway
 - ✅ Single entry point for frontend
-- ✅ Can add authentication layer
+- ✅ Can add authentication stage
 - ✅ Can add rate limiting
 - ✅ Input validation before forwarding
 
@@ -400,7 +400,7 @@ pm2 monit
 - [ ] Social Media Agent (Twitter/Reddit sentiment)
 
 ### Infrastructure
-- [ ] Redis caching layer
+- [ ] Redis caching stage
 - [ ] PostgreSQL for data persistence
 - [ ] Celery for background tasks
 - [ ] WebSocket for real-time updates

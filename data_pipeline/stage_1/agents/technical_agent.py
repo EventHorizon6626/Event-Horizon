@@ -1,8 +1,8 @@
 """
-Technical Indicators Agent (Layer 1)
+Technical Indicators Agent (Stage 1)
 
 Retrieves and calculates technical indicators for stocks.
-Part of Layer 1: Data Retrieval - Technical Analysis category.
+Part of Stage 1: Data Retrieval - Technical Analysis category.
 """
 
 import logging
@@ -16,7 +16,7 @@ from data_pipeline.stage_1.models.schemas import TechnicalData
 
 class TechnicalAgent(BaseAgent):
     """
-    Layer 1 Agent: Technical Indicators Retrieval
+    Stage 1 Agent: Technical Indicators Retrieval
 
     Specialization: Technical indicators (SMA, EMA, RSI, MACD)
     Data Sources: Yahoo Finance via yfinance

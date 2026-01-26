@@ -1,8 +1,8 @@
 """
-News Analysis Agent (Layer 1)
+News Analysis Agent (Stage 1)
 
 Retrieves news articles about stocks.
-Part of Layer 1: Data Retrieval - News & Media category.
+Part of Stage 1: Data Retrieval - News & Media category.
 """
 
 import logging
@@ -16,7 +16,7 @@ from data_pipeline.stage_1.models.schemas import NewsData
 
 class NewsAgent(BaseAgent):
     """
-    Layer 1 Agent: News Articles Retrieval
+    Stage 1 Agent: News Articles Retrieval
 
     Specialization: News articles and headlines
     Data Sources: NewsAPI, financial news providers

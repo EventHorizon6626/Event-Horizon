@@ -1,8 +1,8 @@
 """
-Earnings Report Agent (Layer 1)
+Earnings Report Agent (Stage 1)
 
 Retrieves financial reports and earnings data for stocks and ETFs.
-Part of Layer 1: Data Retrieval - Fundamentals category.
+Part of Stage 1: Data Retrieval - Fundamentals category.
 """
 
 import logging
@@ -16,7 +16,7 @@ from data_pipeline.stage_1.models.schemas import EarningsData
 
 class EarningsAgent(BaseAgent):
     """
-    Layer 1 Agent: Earnings and Financial Reports Retrieval
+    Stage 1 Agent: Earnings and Financial Reports Retrieval
 
     Specialization: Fundamental data (earnings, financials, metrics)
     Data Sources: Yahoo Finance, Financial APIs

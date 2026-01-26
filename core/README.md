@@ -1,10 +1,10 @@
 # Core Components
 
-Shared base classes, utilities, and schemas used across all layers of Event Horizon.
+Shared base classes, utilities, and schemas used across all stages of Event Horizon.
 
 ## Purpose
 
-The `core/` directory contains components that are **layer-independent** and used by multiple layers (Layer 1, Layer 2, Layer 3). This promotes code reuse and maintains consistency across the system.
+The `core/` directory contains components that are **stage-independent** and used by multiple stages (Stage 1, Stage 2, Stage 3). This promotes code reuse and maintains consistency across the system.
 
 ## Directory Structure
 
@@ -12,7 +12,7 @@ The `core/` directory contains components that are **layer-independent** and use
 core/
 ├── base/                  # Base classes
 │   ├── base_agent.py     # Base class for all agents
-│   └── base_orchestrator.py  # Base class for layer orchestrators
+│   └── base_orchestrator.py  # Base class for stage orchestrators
 │
 ├── schemas/              # Shared data models (future)
 │   └── common.py         # Common data types
@@ -31,7 +31,7 @@ core/
 
 ### BaseAgent
 
-Base class for all agents across all layers.
+Base class for all agents across all stages.
 
 **Location**: `core/base/base_agent.py`
 
@@ -56,13 +56,13 @@ class MyAgent(BaseAgent):
 - Execution timing and metadata
 
 **Used by**:
-- Layer 1 agents (CandlestickAgent, EarningsAgent, NewsAgent)
-- Layer 2 agents (future)
-- Layer 3 agents (future)
+- Stage 1 agents (CandlestickAgent, EarningsAgent, NewsAgent)
+- Stage 2 agents (future)
+- Stage 3 agents (future)
 
 ### BaseOrchestrator
 
-Base class for layer orchestrators.
+Base class for stage orchestrators.
 
 **Location**: `core/base/base_orchestrator.py`
 
@@ -70,12 +70,12 @@ Base class for layer orchestrators.
 ```python
 from core.base import BaseOrchestrator
 
-class Layer1Orchestrator(BaseOrchestrator):
+class Stage1Orchestrator(BaseOrchestrator):
     def __init__(self, config=None):
-        super().__init__("layer_1", config)
+        super().__init__("stage_1", config)
 
     def execute(self, input_data):
-        # Implement layer orchestration
+        # Implement stage orchestration
         return {"status": "success", "output": ...}
 ```
 
@@ -86,31 +86,31 @@ class Layer1Orchestrator(BaseOrchestrator):
 - Logging setup
 
 **Used by**:
-- Layer 1 orchestrator
-- Layer 2 orchestrator (future)
-- Layer 3 orchestrator (future)
+- Stage 1 orchestrator
+- Stage 2 orchestrator (future)
+- Stage 3 orchestrator (future)
 
 ## Why Core?
 
 ### Without Core (Problematic)
 
 ```
-layer_1/
+stage_1/
 ├── base_agent.py         # Duplicated
 ├── agents/...
 
-layer_2/
+stage_2/
 ├── base_agent.py         # Duplicated (same code!)
 ├── agents/...
 
-layer_3/
+stage_3/
 ├── base_agent.py         # Duplicated (same code!)
 ├── agents/...
 ```
 
 **Problems**:
 - Code duplication
-- Inconsistent behavior across layers
+- Inconsistent behavior across stages
 - Hard to maintain (change in 3 places)
 - No single source of truth
 
@@ -121,16 +121,16 @@ core/
 └── base/
     ├── base_agent.py     # Single source of truth
 
-layer_1/
+stage_1/
 └── agents/
     ├── candlestick_agent.py  → imports from core.base
     └── news_agent.py         → imports from core.base
 
-layer_2/
+stage_2/
 └── agents/
     └── normalizer_agent.py   → imports from core.base
 
-layer_3/
+stage_3/
 └── agents/
     └── feature_agent.py      → imports from core.base
 ```
@@ -141,24 +141,24 @@ layer_3/
 - ✅ Easy to maintain
 - ✅ DRY (Don't Repeat Yourself)
 
-## What Goes in Core vs Layers?
+## What Goes in Core vs Stages?
 
 ### Goes in Core ✅
 
-**Shared across multiple layers**:
+**Shared across multiple stages**:
 - Base classes (BaseAgent, BaseOrchestrator)
 - Common data validation
 - Shared utilities (logging, config)
 - Universal schemas (Portfolio, Symbol)
 - Error handling framework
 
-### Goes in Layers ❌
+### Goes in Stages ❌
 
-**Layer-specific**:
-- Layer 1: Data retrieval agents, ChartData schema
-- Layer 2: Normalization agents, DNA schema
-- Layer 3: Feature extraction agents, Signal schema
-- Layer-specific models and logic
+**Stage-specific**:
+- Stage 1: Data retrieval agents, ChartData schema
+- Stage 2: Normalization agents, DNA schema
+- Stage 3: Feature extraction agents, Signal schema
+- Stage-specific models and logic
 
 ## Design Pattern
 
@@ -180,10 +180,10 @@ class BaseAgent(ABC):
         # Implemented by subclass
         pass
 
-# layer_1/agents/news_agent.py
+# stage_1/agents/news_agent.py
 class NewsAgent(BaseAgent):
     def _execute_internal(self, input_data):
-        # Layer 1 specific logic
+        # Stage 1 specific logic
         articles = self.news_client.fetch(...)
         return {"articles": articles}
 ```
@@ -193,7 +193,7 @@ class NewsAgent(BaseAgent):
 ### Correct ✅
 
 ```python
-# In layer_1/agents/news_agent.py
+# In stage_1/agents/news_agent.py
 from core.base import BaseAgent  # Import from core
 from services.news_api_client import NewsAPIClient  # Import service
 ```
@@ -201,26 +201,26 @@ from services.news_api_client import NewsAPIClient  # Import service
 ### Incorrect ❌
 
 ```python
-# In layer_1/agents/news_agent.py
-from layer_1.agents.base_agent import BaseAgent  # Wrong! Use core
-from layer_2.utils.helper import some_function  # Wrong! Cross-layer import
+# In stage_1/agents/news_agent.py
+from stage_1.agents.base_agent import BaseAgent  # Wrong! Use core
+from stage_2.utils.helper import some_function  # Wrong! Cross-stage import
 ```
 
 **Rules**:
 1. Always import base classes from `core/`
-2. Never import between layers (layer_1 → layer_2)
-3. Layers can import from `services/` (shared)
-4. Layers can import from `utils/` (shared)
-5. Layers can import from `core/` (shared)
+2. Never import between stages (stage_1 → stage_2)
+3. Stages can import from `services/` (shared)
+4. Stages can import from `utils/` (shared)
+5. Stages can import from `core/` (shared)
 
 ## Extension Points
 
 ### Adding New Base Classes
 
-When you find yourself copying code between layers, create a base class in `core/`:
+When you find yourself copying code between stages, create a base class in `core/`:
 
 ```python
-# If multiple layers need similar validation
+# If multiple stages need similar validation
 # core/base/base_validator.py
 class BaseValidator(ABC):
     @abstractmethod
@@ -231,7 +231,7 @@ class BaseValidator(ABC):
 ### Adding Shared Utilities
 
 ```python
-# If multiple layers need similar helpers
+# If multiple stages need similar helpers
 # core/utils/data_helpers.py
 def normalize_symbol(symbol: str) -> str:
     """Normalize stock symbols to uppercase"""
@@ -241,7 +241,7 @@ def normalize_symbol(symbol: str) -> str:
 ### Adding Common Schemas
 
 ```python
-# If multiple layers use the same data structure
+# If multiple stages use the same data structure
 # core/schemas/common.py
 @dataclass
 class Portfolio:
@@ -294,26 +294,26 @@ def test_base_agent_execution():
 
 ## Migration
 
-If you have code in a layer that should be in core:
+If you have code in a stage that should be in core:
 
 1. Move to appropriate `core/` subdirectory
-2. Update all imports across layers
+2. Update all imports across stages
 3. Add tests
 4. Update documentation
 
 Example:
 ```bash
-# Move base_agent from layer_1 to core
-mv layer_1/agents/base_agent.py core/base/base_agent.py
+# Move base_agent from stage_1 to core
+mv stage_1/agents/base_agent.py core/base/base_agent.py
 
 # Update imports in all agents
-# from layer_1.agents.base_agent import BaseAgent
+# from stage_1.agents.base_agent import BaseAgent
 # to
 # from core.base import BaseAgent
 ```
 
 ## See Also
 
-- [Layer 1 README](../layer_1/README.md) - Layer 1 specific components
+- [Stage 1 README](../stage_1/README.md) - Stage 1 specific components
 - [Services README](../services/README.md) - External API clients
 - [Architecture](../docs/architecture/multi-agent-design.md) - System architecture

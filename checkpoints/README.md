@@ -25,7 +25,7 @@ This directory contains milestone checkpoints documenting the development journe
 **Key Achievements**:
 - FastAPI REST API server
 - Docker deployment with health checks
-- BE integration (Node.js proxy layer)
+- BE integration (Node.js proxy stage)
 - Production deployment on VPS
 - FE → BE → AI full stack working
 - Continuous deployment automation
@@ -41,7 +41,7 @@ This directory contains milestone checkpoints documenting the development journe
 - Stage 2: Data normalization & feature extraction
 - Stage 3: LLM/Neural network analysis
 - Decision system: Trading recommendations
-- Caching layer (Redis)
+- Caching stage (Redis)
 - Rate limiting & security hardening
 - Performance optimization
 

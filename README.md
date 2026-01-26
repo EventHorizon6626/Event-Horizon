@@ -151,7 +151,7 @@ LOG_LEVEL=INFO
 ## Documentation
 
 - **[Multi-Agent Architecture](docs/architecture/multi-agent-architecture.md)** - Complete system design
-- **[Stage 1 Guide](docs/guides/layer-1-guide.md)** - Data retrieval details
+- **[Stage 1 Guide](docs/guides/stage-1-guide.md)** - Data retrieval details
 - **[Data Sources](docs/guides/data-sources.md)** - API information
 
 ---

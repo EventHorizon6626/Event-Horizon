@@ -1,7 +1,7 @@
 """
 Core Components
 
-Shared base classes, utilities, and schemas used across all layers.
+Shared base classes, utilities, and schemas used across all stages.
 """
 
 from core.base.base_agent import BaseAgent
