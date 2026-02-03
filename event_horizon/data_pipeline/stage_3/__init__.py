@@ -1,21 +1,28 @@
 """
-Stage 3: Feature Extraction
+Stage 3: Feature Extraction & Pattern Recognition
 
-Uses LLM/Neural AI to extract non-obvious patterns and generate predictive features.
+Uses LLM to extract non-obvious patterns and generate predictive features.
 
 Responsibilities:
-- Pattern recognition in time-series data
-- Embedding generation from text (news, earnings)
-- Latent feature extraction
-- Predictive signal discovery
+- Pattern recognition in market data
+- Sentiment analysis from news
+- Technical signal interpretation
+- Fundamental health assessment
+- Feature vector generation
+
+🎯 OPIK INTEGRATION:
+- Full LLM tracing and observability
+- Token usage and cost tracking
+- Performance monitoring
+- Evaluation infrastructure
 
 Input: Stage2Output (normalized data)
-Output: Stage3Output (feature vectors)
+Output: Stage3Output (feature vectors + insights)
 
-Status: PLANNED
+Status: IMPLEMENTED ✅ (with Opik!)
 """
 
-# Placeholder for future implementation
-# from event_horizon.data_pipeline.stage_3.orchestrator.stage_3_orchestrator import Stage3Orchestrator
+from event_horizon.data_pipeline.stage_3.orchestrator import Stage3Orchestrator
+from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output, SymbolFeatures
 
-__all__ = []
+__all__ = ["Stage3Orchestrator", "Stage3Output", "SymbolFeatures"]

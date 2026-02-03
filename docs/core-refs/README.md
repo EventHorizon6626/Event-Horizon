@@ -5,6 +5,15 @@ This directory contains core references, research papers, and projects that insp
 ---
 
 ## Research Papers
+### **8B Model Orchestrator Beats GPT-5** (NVIDIA ToolOrchestra, Nov 2025)
+**Paper**: [ToolOrchestra](https://arxiv.org/abs/2511.21689) | [Official Page](https://research.nvidia.com/labs/lpr/ToolOrchestra/)
+
+**Achievement**: 8B parameter orchestrator ranks #1 on GAIA benchmark, outperforming GPT-5 while being 2.5x faster with 30% of the cost.
+
+**How**: Trained via GRPO to coordinate diverse tools (web search, code interpreters, specialized LLMs, generalist LLMs) using multi-objective RL balancing accuracy, efficiency, and user preferences.
+
+**Why This Matters**: Proves compositional AI (small coordinator + specialized tools) beats monolithic models. Represents the future of practical agentic systems.
+
 
 ### TradingAgents: Multi-Agents LLM Financial Trading Framework
 

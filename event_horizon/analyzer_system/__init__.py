@@ -1,24 +1,31 @@
 """
-analyzer-Making System
+Analyzer System
 
 Makes intelligent trading decisions from Stage 3 feature vectors.
 
-Teams:
-- Team 1: Analyst Team (parallel multi-perspective analysis)
-- Team 2: Researcher Team (bull vs bear debate)
-- Team 3: Risk Management Team (position sizing debate)
-- Team 4: Trader Agent (final analyzer & execution)
+Available Agents (flexible, can add more):
+- Bull Researcher: Arguments for long positions, growth opportunities
+- Bear Researcher: Arguments for short positions, risk analysis
+- Research Manager: Synthesizes bull/bear debate into thesis
+- (More agents can be added: Risk Analyzer, Sentiment Analyzer, etc.)
 
 Input: Stage3Output (feature vectors)
 Output: Trading decisions and execution plans
 
-Status: PLANNED
+Status: IN DEVELOPMENT
 """
 
-# Placeholder for future implementation
-# from decision_system.team_1_analysts import AnalystTeam
-# from decision_system.team_2_researchers import ResearcherTeam
-# from decision_system.team_3_risk import RiskTeam
-# from decision_system.team_4_trader import TraderAgent
+# Currently implemented agents
+from event_horizon.analyzer_system.team_2_researchers import (
+    BullResearcher,
+    BearResearcher,
+    ResearchManager,
+    Team2Orchestrator,
+)
 
-__all__ = []
+__all__ = [
+    "BullResearcher",
+    "BearResearcher",
+    "ResearchManager",
+    "Team2Orchestrator",
+]
