@@ -12,10 +12,10 @@ Responsibilities:
 Input: Stage1Output (heterogeneous data)
 Output: Stage2Output (normalized tabular data)
 
-Status: PLANNED
+Status: IMPLEMENTED ✅
 """
 
-# Placeholder for future implementation
-# from event_horizon.data_pipeline.stage_2.orchestrator.stage_2_orchestrator import Stage2Orchestrator
+from event_horizon.data_pipeline.stage_2.orchestrator import Stage2Orchestrator
+from event_horizon.data_pipeline.stage_2.models.schemas import Stage2Output, NormalizedSymbolData
 
-__all__ = []
+__all__ = ["Stage2Orchestrator", "Stage2Output", "NormalizedSymbolData"]

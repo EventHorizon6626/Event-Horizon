@@ -179,4 +179,4 @@ LOG_LEVEL=INFO
 
 ## References
 
-Inspired by [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)
+Inspired by (docs/core-refs) and (docs/references)
