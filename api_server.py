@@ -13,6 +13,11 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from event_horizon.data_pipeline import Stage1Orchestrator
+from event_horizon.data_pipeline.stage_1.agents.candlestick_agent import CandlestickAgent
+from event_horizon.data_pipeline.stage_1.agents.earnings_agent import EarningsAgent
+from event_horizon.data_pipeline.stage_1.agents.news_agent import NewsAgent
+from event_horizon.data_pipeline.stage_1.agents.technical_agent import TechnicalAgent
+from event_horizon.data_pipeline.stage_1.agents.fundamentals_agent import FundamentalsAgent
 
 # Load environment variables
 load_dotenv()
@@ -192,6 +197,96 @@ async def get_supported_agents():
             }
         ]
     }
+
+
+# ===== Individual Agent Endpoints =====
+
+class AgentRequest(BaseModel):
+    """Request model for individual agent execution"""
+    stocks: List[str]
+    timeframe: Optional[str] = "1d"
+    period: Optional[str] = "30d"
+    days: Optional[int] = 7
+    indicators: Optional[List[str]] = None
+
+
+@app.post("/agents/candlestick")
+async def run_candlestick_agent(request: AgentRequest):
+    """Execute Candlestick agent for given stocks"""
+    try:
+        logger.info(f"Running Candlestick agent for {len(request.stocks)} stocks")
+        config = {
+            "period": request.period,
+            "interval": request.timeframe
+        }
+        agent = CandlestickAgent(config)
+        result = agent._execute_internal(request.stocks)
+        return result
+    except Exception as e:
+        logger.error(f"Candlestick agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agents/earnings")
+async def run_earnings_agent(request: AgentRequest):
+    """Execute Earnings agent for given stocks"""
+    try:
+        logger.info(f"Running Earnings agent for {len(request.stocks)} stocks")
+        config = stage1_config["agent_configs"]["earnings"]
+        agent = EarningsAgent(config)
+        result = agent._execute_internal(request.stocks)
+        return result
+    except Exception as e:
+        logger.error(f"Earnings agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agents/news")
+async def run_news_agent(request: AgentRequest):
+    """Execute News agent for given stocks"""
+    try:
+        logger.info(f"Running News agent for {len(request.stocks)} stocks")
+        config = {
+            "max_articles_per_stock": 10,
+            "days_back": request.days or 7
+        }
+        agent = NewsAgent(config)
+        result = agent._execute_internal(request.stocks)
+        return result
+    except Exception as e:
+        logger.error(f"News agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agents/technical")
+async def run_technical_agent(request: AgentRequest):
+    """Execute Technical Analysis agent for given stocks"""
+    try:
+        logger.info(f"Running Technical agent for {len(request.stocks)} stocks")
+        config = {
+            "indicators": request.indicators or ["SMA", "RSI", "MACD"],
+            "look_back_days": 30
+        }
+        agent = TechnicalAgent(config)
+        result = agent._execute_internal(request.stocks)
+        return result
+    except Exception as e:
+        logger.error(f"Technical agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agents/fundamentals")
+async def run_fundamentals_agent(request: AgentRequest):
+    """Execute Fundamentals agent for given stocks"""
+    try:
+        logger.info(f"Running Fundamentals agent for {len(request.stocks)} stocks")
+        config = stage1_config["agent_configs"]["fundamentals"]
+        agent = FundamentalsAgent(config)
+        result = agent._execute_internal(request.stocks)
+        return result
+    except Exception as e:
+        logger.error(f"Fundamentals agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
