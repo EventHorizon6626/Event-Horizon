@@ -5,8 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: event-horizon-ai
 
-    # Bind to localhost only - not exposed to internet
-    # Your BE will connect to this via http://localhost:8001
+    # Bind to localhost only - Backend will proxy requests
     ports:
       - "127.0.0.1:8001:8001"
 
