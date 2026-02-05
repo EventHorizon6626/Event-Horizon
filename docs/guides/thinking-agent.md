@@ -222,6 +222,7 @@ Environment variables:
 
 ## See Also
 
-- [Agent System Overview](../architecture/agents.md)
-- [Data Pipeline](../architecture/data-pipeline.md)
-- [API Reference](../references/api.md)
+- [Multi-Agent Architecture](../architecture/multi-agent-architecture.md)
+- [System Architecture](../architecture/system-architecture.md)
+- [Backend Integration](../architecture/backend-integration.md)
+- [Stage 1 Guide](./stage-1-guide.md)

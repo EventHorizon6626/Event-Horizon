@@ -172,13 +172,22 @@ GET  /health                 # Health check
 POST /api/portfolio/analyze  # Full analysis (news + reports)
 POST /api/news               # News only
 POST /api/reports            # Reports only
+POST /agents/think           # Thinking agent (ReAct-style iterative reasoning)
+POST /agents/candlestick     # Candlestick data
+POST /agents/earnings        # Earnings data
+POST /agents/technical       # Technical indicators
+POST /agents/fundamentals    # Fundamental metrics
 GET  /docs                   # Swagger documentation
 ```
 
 **Agents:**
 - `NewsAgent` - Fetches news from NewsAPI.org
 - `ReportAnalysisAgent` - Fetches financial data from Yahoo Finance
-- (Future agents can be added easily)
+- `CandlestickAgent` - Retrieves OHLCV price data
+- `EarningsAgent` - Retrieves financial reports
+- `TechnicalAgent` - Calculates technical indicators
+- `FundamentalsAgent` - Retrieves fundamental metrics
+- `ThinkingAgent` - ReAct-style iterative reasoning agent (see [Thinking Agent Guide](../guides/thinking-agent.md))
 
 ---
 

@@ -579,6 +579,33 @@ curl https://evth-api.hirodev.space/api/ai/health
 | `/api/ai/portfolio/analyze` | → | `http://localhost:5000/api/portfolio/analyze` |
 | `/api/ai/news` | → | `http://localhost:5000/api/news` |
 | `/api/ai/reports` | → | `http://localhost:5000/api/reports` |
+| `/api/ai/agents/think` | → | `http://localhost:5000/agents/think` |
+| `/api/ai/agents/candlestick` | → | `http://localhost:5000/agents/candlestick` |
+| `/api/ai/agents/earnings` | → | `http://localhost:5000/agents/earnings` |
+| `/api/ai/agents/technical` | → | `http://localhost:5000/agents/technical` |
+| `/api/ai/agents/fundamentals` | → | `http://localhost:5000/agents/fundamentals` |
+
+### Thinking Agent Endpoint
+
+The `/agents/think` endpoint has a longer timeout (3 minutes) due to iterative processing:
+
+```javascript
+// Proxy thinking agent requests with extended timeout
+router.post('/agents/think', async (req, res) => {
+  try {
+    const response = await axios.post(
+      'http://localhost:5000/agents/think',
+      req.body,
+      { timeout: 180000 }  // 3 minute timeout
+    );
+    res.json(response.data);
+  } catch (error) {
+    // Handle timeout and errors
+  }
+});
+```
+
+See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentation.
 
 ---
 
