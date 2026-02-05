@@ -5,8 +5,10 @@ Exposes Stage 1 data pipeline as REST API endpoints
 
 import os
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+import json
+import re
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -305,6 +307,31 @@ class System2Request(BaseModel):
     """Request model for System 2 agents"""
     stocks: List[str]
     data: Optional[dict] = None
+
+
+class CustomAgentRequest(BaseModel):
+    """Request model for custom agent execution"""
+    stocks: List[str]
+    system_prompt: str
+    user_prompt: Optional[str] = None
+    llm_config: Optional[dict] = None
+
+
+class GenerateSystemPromptRequest(BaseModel):
+    """Request model for generating system prompts"""
+    name: str
+    description: str
+    team: Optional[str] = "Team 1"
+    category: Optional[str] = "strategy_agent"
+
+
+class ThinkingAgentRequest(BaseModel):
+    """Request model for iterative thinking agent execution"""
+    stocks: List[str]
+    input_data: Optional[dict] = None
+    system_prompt: str
+    max_iterations: int = 5
+    available_tools: List[str] = ["candlestick", "earnings", "news", "technical", "fundamentals"]
 
 
 def call_gemini(prompt: str, system_prompt: str = None) -> str:
@@ -622,6 +649,517 @@ Provide execution plan in JSON:
         return {"status": "success", "agent": "trader", "result": result}
     except Exception as e:
         logger.error(f"Trader Agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== Custom Agent Endpoints =====
+
+@app.post("/agents/custom")
+async def run_custom_agent(request: CustomAgentRequest):
+    """
+    Execute a custom agent with user-provided system prompt.
+
+    Request body:
+    {
+        "stocks": ["AAPL", "TSLA"],
+        "system_prompt": "You are a dividend-focused analyst...",
+        "user_prompt": "Analyze these stocks for dividend potential",
+        "llm_config": { "provider": "google", "model": "gemini-1.5-pro" }
+    }
+    """
+    try:
+        logger.info(f"Running Custom Agent for {request.stocks}")
+
+        # Build user prompt
+        user_prompt = request.user_prompt or f"Analyze the following stocks: {request.stocks}"
+        prompt = f"""{user_prompt}
+
+Stocks to analyze: {request.stocks}
+
+Provide your analysis in a structured JSON format."""
+
+        result = call_gemini(prompt, request.system_prompt)
+        return {
+            "status": "success",
+            "agent": "custom",
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Custom Agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agents/generate-system-prompt")
+async def generate_system_prompt(request: GenerateSystemPromptRequest):
+    """
+    Generate a system prompt from agent name, description, and team context.
+
+    Request body:
+    {
+        "name": "Dividend Hunter",
+        "description": "An agent that finds high-yield dividend stocks",
+        "team": "Team 1",
+        "category": "strategy_agent"
+    }
+
+    Returns:
+    {
+        "status": "success",
+        "system_prompt": "You are a Dividend Hunter agent..."
+    }
+    """
+    try:
+        logger.info(f"Generating system prompt for agent: {request.name}")
+
+        # Define team context
+        team_contexts = {
+            "Team 1": "Market Analysis team. Your role is to analyze market data and provide insights. You work alongside Fundamentals Analyst, Sentiment Analyst, News Analyst, and Technical Analyst.",
+            "Team 2": "Bull/Bear Debate team. Your role is to build investment cases and debate. You work alongside Bull Researcher, Bear Researcher, and Research Manager.",
+            "Team 3": "Portfolio Optimization team. Your role is to manage portfolio allocation and position sizing. You work with the Portfolio Manager.",
+            "Team 4": "Risk Assessment team. Your role is to evaluate risk and execution. You work alongside Risk Manager and Trader Agent.",
+        }
+
+        category_contexts = {
+            "strategy_agent": "You provide strategic investment recommendations based on your analysis.",
+            "risk_manager": "You evaluate and manage risk for investment decisions.",
+            "custom_analyzer": "You perform specialized analysis based on your unique focus area.",
+            "data_retriever": "You retrieve and process financial data for other agents.",
+            "news_agent": "You analyze news and market sentiment.",
+            "technical_agent": "You perform technical analysis on price and volume data.",
+        }
+
+        team_context = team_contexts.get(request.team, team_contexts["Team 1"])
+        category_context = category_contexts.get(request.category, category_contexts["strategy_agent"])
+
+        # Use Gemini to generate the system prompt
+        meta_prompt = f"""You are an expert at creating system prompts for AI agents in a multi-agent trading system.
+
+Create a detailed system prompt for an agent with the following characteristics:
+
+**Agent Name:** {request.name}
+**Description:** {request.description}
+**Team Context:** {team_context}
+**Category:** {category_context}
+
+The system prompt should:
+1. Define the agent's role and expertise clearly
+2. List specific responsibilities (3-5 bullet points)
+3. Specify the input the agent receives
+4. Define the expected output format (JSON structure preferred)
+5. Include any relevant domain knowledge
+
+Write ONLY the system prompt, nothing else. Start directly with "You are..." """
+
+        system_prompt = call_gemini(meta_prompt)
+
+        # Clean up the response if needed
+        if isinstance(system_prompt, dict) and "error" in system_prompt:
+            raise Exception(system_prompt["error"])
+
+        return {
+            "status": "success",
+            "system_prompt": system_prompt.strip()
+        }
+    except Exception as e:
+        logger.error(f"System prompt generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== Thinking Agent Endpoint =====
+
+TOOLS_DESCRIPTION = {
+    "candlestick": "OHLCV price data including open, high, low, close, volume for each trading day",
+    "earnings": "Financial reports, quarterly earnings, EPS history, revenue data",
+    "news": "Recent news articles, headlines, and press releases about the stocks",
+    "technical": "Technical indicators including RSI, MACD, SMA, EMA, Bollinger Bands",
+    "fundamentals": "Fundamental metrics like P/E ratio, P/B ratio, EPS, dividend yield, market cap"
+}
+
+THINK_PROMPT = """You are an intelligent financial analysis agent with access to data tools.
+
+Your task: {system_prompt}
+
+Available data tools:
+{tools_description}
+
+Current context:
+- Stocks: {stocks}
+- Data already collected: {collected_data_summary}
+
+Decide your next action. You must respond in JSON only (no markdown, no explanation):
+
+Option 1 - Need data from existing tool:
+{{"action": "call_tool", "tool": "tool_name", "reasoning": "why I need this data"}}
+
+Option 2 - Need specialized data that existing tools don't provide:
+{{"action": "create_data_agent", "agent_name": "Name for the agent", "agent_description": "Describe what data this agent should fetch", "data_type": "what kind of data (e.g., options chain, insider trading, SEC filings)", "reasoning": "why existing tools don't have this data"}}
+
+Option 3 - Ready to answer (have sufficient data):
+{{"action": "generate_response", "reasoning": "I have sufficient data because..."}}
+
+Think step by step. What data do you need to complete the analysis?"""
+
+
+def summarize_data(data: dict) -> str:
+    """Create a concise summary of collected data for context"""
+    if not data:
+        return "No data collected yet"
+
+    summaries = []
+    for tool_name, tool_data in data.items():
+        if tool_name == "candlestick":
+            summaries.append(f"- {tool_name}: price data available")
+        elif tool_name == "earnings":
+            summaries.append(f"- {tool_name}: earnings/financials data available")
+        elif tool_name == "news":
+            summaries.append(f"- {tool_name}: news articles available")
+        elif tool_name == "technical":
+            summaries.append(f"- {tool_name}: technical indicators available")
+        elif tool_name == "fundamentals":
+            summaries.append(f"- {tool_name}: fundamental metrics available")
+        else:
+            summaries.append(f"- {tool_name}: custom data available")
+
+    return "\n".join(summaries) if summaries else "No data collected yet"
+
+
+def summarize_tool_result(tool_name: str, result: Any) -> str:
+    """Create a concise summary of tool execution result"""
+    if isinstance(result, dict):
+        if "error" in result:
+            return f"Error: {result['error']}"
+        # Count items or keys
+        if isinstance(result, dict):
+            return f"Retrieved {len(result)} items"
+    return "Data retrieved successfully"
+
+
+async def execute_tool(tool_name: str, stocks: List[str]) -> dict:
+    """Execute a built-in data tool and return results"""
+    try:
+        if tool_name == "candlestick":
+            config = {"period": "1mo", "interval": "1d"}
+            agent = CandlestickAgent(config)
+            return agent._execute_internal(stocks)
+
+        elif tool_name == "earnings":
+            config = stage1_config["agent_configs"]["earnings"]
+            agent = EarningsAgent(config)
+            return agent._execute_internal(stocks)
+
+        elif tool_name == "news":
+            config = {"max_articles_per_stock": 10, "days_back": 7}
+            agent = NewsAgent(config)
+            return agent._execute_internal(stocks)
+
+        elif tool_name == "technical":
+            config = {"indicators": ["SMA", "RSI", "MACD"], "look_back_days": 30}
+            agent = TechnicalAgent(config)
+            return agent._execute_internal(stocks)
+
+        elif tool_name == "fundamentals":
+            config = stage1_config["agent_configs"]["fundamentals"]
+            agent = FundamentalsAgent(config)
+            return agent._execute_internal(stocks)
+
+        else:
+            return {"error": f"Unknown tool: {tool_name}"}
+
+    except Exception as e:
+        logger.error(f"Tool execution failed for {tool_name}: {e}")
+        return {"error": str(e)}
+
+
+async def think_step(system_prompt: str, context: dict, available_tools: List[str]) -> dict:
+    """Execute a thinking step - ask the LLM what action to take next"""
+    stocks = context.get("stocks", [])
+    collected_data = context.get("data", {})
+
+    # Build tools description for available tools only
+    tools_desc = "\n".join([
+        f"- {tool}: {TOOLS_DESCRIPTION.get(tool, 'Custom data tool')}"
+        for tool in available_tools
+    ])
+
+    # Format the thinking prompt
+    prompt = THINK_PROMPT.format(
+        system_prompt=system_prompt,
+        tools_description=tools_desc,
+        stocks=stocks,
+        collected_data_summary=summarize_data(collected_data)
+    )
+
+    try:
+        # Call LLM to decide next action
+        response = call_gemini(prompt)
+
+        if isinstance(response, dict) and "error" in response:
+            return {"action": "generate_response", "reasoning": "LLM error, generating response with available data"}
+
+        # Parse JSON response
+        # Clean up markdown code blocks if present
+        clean_response = response.strip()
+        if clean_response.startswith("```"):
+            clean_response = re.sub(r'^```(?:json)?\s*', '', clean_response)
+            clean_response = re.sub(r'\s*```$', '', clean_response)
+
+        thought = json.loads(clean_response)
+        return thought
+
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse thinking response as JSON: {e}")
+        # Default to generating response if JSON parsing fails
+        return {"action": "generate_response", "reasoning": "Could not parse LLM response, generating final response"}
+    except Exception as e:
+        logger.error(f"Think step failed: {e}")
+        return {"action": "generate_response", "reasoning": f"Error in thinking: {str(e)}"}
+
+
+async def generate_final_response(system_prompt: str, context: dict) -> dict:
+    """Generate the final analysis response using collected data"""
+    stocks = context.get("stocks", [])
+    collected_data = context.get("data", {})
+
+    prompt = f"""Based on the following data, provide your analysis.
+
+Your role: {system_prompt}
+
+Stocks: {stocks}
+
+Available data:
+{json.dumps(collected_data, indent=2, default=str)[:8000]}
+
+Provide your final analysis in JSON format. Include:
+- summary: Brief overview of your findings
+- recommendations: List of actionable recommendations
+- confidence: Your confidence level (0-1)
+- key_insights: Most important findings
+- risks: Any risks or caveats to note"""
+
+    try:
+        response = call_gemini(prompt)
+
+        if isinstance(response, dict) and "error" in response:
+            return response
+
+        # Try to parse as JSON, otherwise return as text
+        clean_response = response.strip()
+        if clean_response.startswith("```"):
+            clean_response = re.sub(r'^```(?:json)?\s*', '', clean_response)
+            clean_response = re.sub(r'\s*```$', '', clean_response)
+
+        try:
+            return json.loads(clean_response)
+        except json.JSONDecodeError:
+            return {"summary": response, "raw_response": True}
+
+    except Exception as e:
+        logger.error(f"Final response generation failed: {e}")
+        return {"error": str(e)}
+
+
+def generate_data_agent_prompt(thought: dict) -> str:
+    """Generate system prompt for a custom data agent"""
+    data_type = thought.get("data_type", "specialized data")
+    description = thought.get("agent_description", "Retrieve and process financial data")
+
+    return f"""You are a specialized data retrieval agent.
+
+Your job is to fetch {data_type} data for the given stocks.
+
+Data to retrieve: {description}
+
+For each stock, retrieve the relevant data and return it in a structured JSON format.
+Include timestamps and source information where available.
+
+Output format:
+{{
+    "status": "success",
+    "data": {{
+        "<SYMBOL>": {{
+            // relevant data fields
+        }}
+    }},
+    "metadata": {{
+        "retrieved_at": "ISO timestamp",
+        "source": "data source name"
+    }}
+}}"""
+
+
+@app.post("/agents/think")
+async def run_thinking_agent(request: ThinkingAgentRequest):
+    """
+    Execute a thinking agent with iterative ReAct-style reasoning loop.
+
+    The agent will:
+    1. Analyze what data it needs
+    2. Call available tools to gather data
+    3. Optionally suggest creating new data agents
+    4. Generate final analysis when ready
+
+    Request body:
+    {
+        "stocks": ["AAPL", "TSLA"],
+        "input_data": { ... },           # Optional: data from prior agent
+        "system_prompt": "You are...",
+        "max_iterations": 5,
+        "available_tools": ["candlestick", "earnings", "news", "technical", "fundamentals"]
+    }
+
+    Returns:
+    {
+        "status": "success" | "paused",
+        "final_result": { ... },
+        "thinking_steps": [...],
+        "tools_used": [...],
+        "iterations_used": N
+    }
+    """
+    try:
+        logger.info(f"Running Thinking Agent for {request.stocks}")
+
+        thinking_steps = []
+        context = {
+            "stocks": request.stocks,
+            "data": request.input_data.copy() if request.input_data else {}
+        }
+        final_result = None
+        tools_used = []
+
+        for iteration in range(1, request.max_iterations + 1):
+            logger.info(f"Thinking iteration {iteration}/{request.max_iterations}")
+
+            # Step 1: Think - what do I need?
+            thought = await think_step(
+                request.system_prompt,
+                context,
+                request.available_tools
+            )
+
+            action = thought.get("action", "generate_response")
+            reasoning = thought.get("reasoning", "")
+
+            # Step 2: Execute action based on thought
+            if action == "call_tool":
+                tool_name = thought.get("tool", "")
+
+                # Validate tool is available
+                if tool_name not in request.available_tools:
+                    thinking_steps.append({
+                        "iteration": iteration,
+                        "thought": reasoning,
+                        "action": "error",
+                        "error": f"Tool '{tool_name}' not in available tools"
+                    })
+                    continue
+
+                # Skip if already have this data
+                if tool_name in context["data"]:
+                    thinking_steps.append({
+                        "iteration": iteration,
+                        "thought": reasoning,
+                        "action": "skip",
+                        "message": f"Already have {tool_name} data"
+                    })
+                    continue
+
+                # Execute the tool
+                tool_result = await execute_tool(tool_name, request.stocks)
+                context["data"][tool_name] = tool_result
+                tools_used.append(tool_name)
+
+                thinking_steps.append({
+                    "iteration": iteration,
+                    "thought": reasoning,
+                    "action": "call_tool",
+                    "tool": tool_name,
+                    "tool_result_summary": summarize_tool_result(tool_name, tool_result)
+                })
+
+            elif action == "create_data_agent":
+                # PAUSE execution - need custom data agent
+                agent_name = thought.get("agent_name", "Custom Data Agent")
+                agent_description = thought.get("agent_description", "")
+                data_type = thought.get("data_type", "specialized data")
+
+                thinking_steps.append({
+                    "iteration": iteration,
+                    "thought": reasoning,
+                    "action": "need_custom_data_agent",
+                    "suggested_data_agent": {
+                        "name": agent_name,
+                        "description": agent_description,
+                        "data_type": data_type
+                    }
+                })
+
+                return {
+                    "status": "paused",
+                    "reason": "need_data_agent",
+                    "message": f"Need data agent to fetch: {data_type}",
+                    "final_result": None,
+                    "thinking_steps": thinking_steps,
+                    "suggested_data_agent": {
+                        "name": agent_name,
+                        "description": agent_description,
+                        "data_type": data_type,
+                        "suggested_system_prompt": generate_data_agent_prompt(thought)
+                    },
+                    "resume_context": {
+                        "stocks": request.stocks,
+                        "system_prompt": request.system_prompt,
+                        "collected_data": context["data"],
+                        "iteration": iteration
+                    },
+                    "tools_used": tools_used,
+                    "iterations_used": iteration
+                }
+
+            elif action == "generate_response":
+                # Final analysis - generate response
+                final_result = await generate_final_response(request.system_prompt, context)
+
+                thinking_steps.append({
+                    "iteration": iteration,
+                    "thought": reasoning,
+                    "action": "generate_response",
+                    "result": final_result
+                })
+                break
+
+            else:
+                # Unknown action - default to generating response
+                logger.warning(f"Unknown action: {action}, generating response")
+                final_result = await generate_final_response(request.system_prompt, context)
+                thinking_steps.append({
+                    "iteration": iteration,
+                    "thought": f"Unknown action '{action}', generating response",
+                    "action": "generate_response",
+                    "result": final_result
+                })
+                break
+
+        # If we exhausted iterations without generating response, do it now
+        if final_result is None:
+            final_result = await generate_final_response(request.system_prompt, context)
+            thinking_steps.append({
+                "iteration": request.max_iterations,
+                "thought": "Max iterations reached, generating final response",
+                "action": "generate_response",
+                "result": final_result
+            })
+
+        return {
+            "status": "success",
+            "final_result": final_result,
+            "thinking_steps": thinking_steps,
+            "tools_used": list(set(tools_used)),
+            "iterations_used": len(thinking_steps)
+        }
+
+    except Exception as e:
+        logger.error(f"Thinking Agent failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
