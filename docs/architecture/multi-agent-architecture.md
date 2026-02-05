@@ -852,6 +852,55 @@ SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: analyzer-MAKING SYSTEM
 
 ---
 
+## Thinking Agent System
+
+### Overview
+
+The Thinking Agent system adds **ReAct-style iterative reasoning** to custom agents. This allows agents to autonomously decide what data they need and request it through tool calls.
+
+**Status**: ✅ Implemented
+
+### Architecture
+
+```
+Portfolio → Thinking Agent → [Iteration Loop] → Final Output
+                ↓
+           ┌────────────────────────────────────────┐
+           │  1. Analyze input (portfolio or data)  │
+           │  2. Decide: Need more data?            │
+           │     → Yes: Call tool (candlestick,    │
+           │            earnings, news, etc.)       │
+           │     → No: Generate analysis            │
+           │  3. Loop until max iterations          │
+           └────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Iterative Reasoning**: Agent thinks step-by-step about what data it needs
+- **Tool Calling**: Can request data from built-in agents (candlestick, earnings, news, technical, fundamentals)
+- **Custom Data Agent Suggestions**: If agent needs data that doesn't exist, it can suggest creating a new data agent
+- **Thinking Transparency**: All reasoning steps are captured and can be displayed in UI
+- **Configurable Iterations**: Max iterations (1-10) prevent infinite loops
+
+### API Endpoint
+
+```
+POST /agents/think
+{
+  "stocks": ["AAPL", "TSLA"],
+  "system_prompt": "You are a dividend-focused analyst...",
+  "max_iterations": 5,
+  "available_tools": ["candlestick", "earnings", "news", "technical", "fundamentals"]
+}
+```
+
+### Documentation
+
+See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentation and usage examples.
+
+---
+
 ## Future Enhancements
 
 ### Advanced Features
