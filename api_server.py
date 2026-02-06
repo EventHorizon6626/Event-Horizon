@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from google import genai
+from google.genai import types
 from pydantic import BaseModel
 
 from event_horizon.data_pipeline import Stage1Orchestrator
@@ -274,8 +275,9 @@ async def run_fundamentals_agent(request: AgentRequest):
 
 # Configure Gemini
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+gemini_client = None
 if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
+    gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
 
 
 class System2Request(BaseModel):
@@ -315,13 +317,18 @@ class ThinkingAgentRequest(BaseModel):
 
 def call_gemini(prompt: str, system_prompt: str = None) -> str:
     """Call Google Gemini API"""
-    if not GOOGLE_API_KEY:
+    if not gemini_client:
         return {"error": "GOOGLE_API_KEY not configured"}
 
-    model = genai.GenerativeModel(
-        model_name=os.getenv("DEFAULT_DEEP_THINK_MODEL", "gemini-2.0-flash-exp"), system_instruction=system_prompt
-    )
-    response = model.generate_content(prompt)
+    model_name = os.getenv("DEFAULT_DEEP_THINK_MODEL", "gemini-2.0-flash-exp")
+
+    # Create config with system instruction if provided
+    if system_prompt:
+        config = types.GenerateContentConfig(system_instruction=system_prompt)
+    else:
+        config = None
+
+    response = gemini_client.models.generate_content(model=model_name, contents=prompt, config=config)
     return response.text
 
 
