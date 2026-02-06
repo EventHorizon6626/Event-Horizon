@@ -10,10 +10,10 @@ import re
 from datetime import datetime
 from typing import Any, List, Optional
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from google import genai
 from pydantic import BaseModel
 
 from event_horizon.data_pipeline import Stage1Orchestrator
@@ -319,7 +319,7 @@ def call_gemini(prompt: str, system_prompt: str = None) -> str:
         return {"error": "GOOGLE_API_KEY not configured"}
 
     model = genai.GenerativeModel(
-        model_name=os.getenv("DEFAULT_DEEP_THINK_MODEL", "gemini-1.5-pro"), system_instruction=system_prompt
+        model_name=os.getenv("DEFAULT_DEEP_THINK_MODEL", "gemini-2.0-flash-exp"), system_instruction=system_prompt
     )
     response = model.generate_content(prompt)
     return response.text

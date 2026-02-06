@@ -22,7 +22,7 @@ pyyaml==6.0.1
 # LLM & AI
 openai>=1.12.0
 anthropic>=0.18.0
-google-generativeai>=0.8.0
+google-genai
 
 # Opik - LLM Observability (for hackathon demo!)
 opik>=0.2.0
