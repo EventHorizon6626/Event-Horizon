@@ -3,40 +3,36 @@ Event Horizon AI - FastAPI Server
 Exposes Stage 1 data pipeline as REST API endpoints
 """
 
-import os
-import logging
-from typing import List, Optional, Dict, Any
-from datetime import datetime
 import json
+import logging
+import os
 import re
+from datetime import datetime
+from typing import Any, List, Optional
 
+import google.generativeai as genai
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
 from event_horizon.data_pipeline import Stage1Orchestrator
 from event_horizon.data_pipeline.stage_1.agents.candlestick_agent import CandlestickAgent
 from event_horizon.data_pipeline.stage_1.agents.earnings_agent import EarningsAgent
+from event_horizon.data_pipeline.stage_1.agents.fundamentals_agent import FundamentalsAgent
 from event_horizon.data_pipeline.stage_1.agents.news_agent import NewsAgent
 from event_horizon.data_pipeline.stage_1.agents.technical_agent import TechnicalAgent
-from event_horizon.data_pipeline.stage_1.agents.fundamentals_agent import FundamentalsAgent
 
 # Load environment variables
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI
 app = FastAPI(
-    title="Event Horizon AI API",
-    description="Multi-agent AI system for financial data analysis",
-    version="1.0.0"
+    title="Event Horizon AI API", description="Multi-agent AI system for financial data analysis", version="1.0.0"
 )
 
 # CORS middleware - configure for your FE domain
@@ -95,21 +91,13 @@ stage1_config = {
 @app.get("/", response_model=HealthResponse)
 async def root():
     """Health check endpoint"""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.now().isoformat(),
-        version="1.0.0"
-    )
+    return HealthResponse(status="healthy", timestamp=datetime.now().isoformat(), version="1.0.0")
 
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
     """Detailed health check"""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.now().isoformat(),
-        version="1.0.0"
-    )
+    return HealthResponse(status="healthy", timestamp=datetime.now().isoformat(), version="1.0.0")
 
 
 @app.post("/api/v1/analyze-portfolio")
@@ -150,7 +138,7 @@ async def analyze_portfolio(request: PortfolioRequest):
         # Prepare input
         portfolio_input = {
             "portfolio": request.portfolio,
-            "portfolio_id": request.portfolio_id or f"portfolio_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            "portfolio_id": request.portfolio_id or f"portfolio_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         }
 
         # Execute Stage 1
@@ -165,7 +153,7 @@ async def analyze_portfolio(request: PortfolioRequest):
 
     except Exception as e:
         logger.error(f"Error analyzing portfolio: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/v1/supported-agents")
@@ -173,39 +161,37 @@ async def get_supported_agents():
     """Get list of supported data agents"""
     return {
         "agents": [
-            {
-                "name": "candlestick",
-                "description": "OHLCV price data",
-                "config_options": ["period", "interval"]
-            },
+            {"name": "candlestick", "description": "OHLCV price data", "config_options": ["period", "interval"]},
             {
                 "name": "earnings",
                 "description": "Financial reports & earnings",
-                "config_options": ["include_financials", "earnings_periods"]
+                "config_options": ["include_financials", "earnings_periods"],
             },
             {
                 "name": "news",
                 "description": "News articles & headlines",
-                "config_options": ["max_articles_per_stock", "days_back"]
+                "config_options": ["max_articles_per_stock", "days_back"],
             },
             {
                 "name": "technical",
                 "description": "Technical indicators (SMA, RSI, MACD)",
-                "config_options": ["indicators", "look_back_days"]
+                "config_options": ["indicators", "look_back_days"],
             },
             {
                 "name": "fundamentals",
                 "description": "Fundamental metrics (P/E, ROE, etc.)",
-                "config_options": ["include_ratios", "include_financials"]
-            }
+                "config_options": ["include_ratios", "include_financials"],
+            },
         ]
     }
 
 
 # ===== Individual Agent Endpoints =====
 
+
 class AgentRequest(BaseModel):
     """Request model for individual agent execution"""
+
     stocks: List[str]
     timeframe: Optional[str] = "1d"
     period: Optional[str] = "30d"
@@ -218,16 +204,13 @@ async def run_candlestick_agent(request: AgentRequest):
     """Execute Candlestick agent for given stocks"""
     try:
         logger.info(f"Running Candlestick agent for {len(request.stocks)} stocks")
-        config = {
-            "period": request.period,
-            "interval": request.timeframe
-        }
+        config = {"period": request.period, "interval": request.timeframe}
         agent = CandlestickAgent(config)
         result = agent._execute_internal(request.stocks)
         return result
     except Exception as e:
         logger.error(f"Candlestick agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/earnings")
@@ -241,7 +224,7 @@ async def run_earnings_agent(request: AgentRequest):
         return result
     except Exception as e:
         logger.error(f"Earnings agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/news")
@@ -249,16 +232,13 @@ async def run_news_agent(request: AgentRequest):
     """Execute News agent for given stocks"""
     try:
         logger.info(f"Running News agent for {len(request.stocks)} stocks")
-        config = {
-            "max_articles_per_stock": 10,
-            "days_back": request.days or 7
-        }
+        config = {"max_articles_per_stock": 10, "days_back": request.days or 7}
         agent = NewsAgent(config)
         result = agent._execute_internal(request.stocks)
         return result
     except Exception as e:
         logger.error(f"News agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/technical")
@@ -266,16 +246,13 @@ async def run_technical_agent(request: AgentRequest):
     """Execute Technical Analysis agent for given stocks"""
     try:
         logger.info(f"Running Technical agent for {len(request.stocks)} stocks")
-        config = {
-            "indicators": request.indicators or ["SMA", "RSI", "MACD"],
-            "look_back_days": 30
-        }
+        config = {"indicators": request.indicators or ["SMA", "RSI", "MACD"], "look_back_days": 30}
         agent = TechnicalAgent(config)
         result = agent._execute_internal(request.stocks)
         return result
     except Exception as e:
         logger.error(f"Technical agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/fundamentals")
@@ -289,13 +266,11 @@ async def run_fundamentals_agent(request: AgentRequest):
         return result
     except Exception as e:
         logger.error(f"Fundamentals agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ===== System 2: Team 2 Researcher Endpoints =====
 # These use Google Gemini (FREE tier) by default
-
-import google.generativeai as genai
 
 # Configure Gemini
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -305,12 +280,14 @@ if GOOGLE_API_KEY:
 
 class System2Request(BaseModel):
     """Request model for System 2 agents"""
+
     stocks: List[str]
     data: Optional[dict] = None
 
 
 class CustomAgentRequest(BaseModel):
     """Request model for custom agent execution"""
+
     stocks: List[str]
     system_prompt: str
     user_prompt: Optional[str] = None
@@ -319,14 +296,16 @@ class CustomAgentRequest(BaseModel):
 
 class GenerateSystemPromptRequest(BaseModel):
     """Request model for generating system prompts"""
+
     name: str
-    description: str
+    description: Optional[str] = ""  # Make optional with empty default
     team: Optional[str] = "Team 1"
     category: Optional[str] = "strategy_agent"
 
 
 class ThinkingAgentRequest(BaseModel):
     """Request model for iterative thinking agent execution"""
+
     stocks: List[str]
     input_data: Optional[dict] = None
     system_prompt: str
@@ -340,8 +319,7 @@ def call_gemini(prompt: str, system_prompt: str = None) -> str:
         return {"error": "GOOGLE_API_KEY not configured"}
 
     model = genai.GenerativeModel(
-        model_name=os.getenv("DEFAULT_DEEP_THINK_MODEL", "gemini-1.5-pro"),
-        system_instruction=system_prompt
+        model_name=os.getenv("DEFAULT_DEEP_THINK_MODEL", "gemini-1.5-pro"), system_instruction=system_prompt
     )
     response = model.generate_content(prompt)
     return response.text
@@ -375,7 +353,7 @@ Return JSON format:
         return {"status": "success", "agent": "bull_researcher", "result": result}
     except Exception as e:
         logger.error(f"Bull Researcher failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/bear-researcher")
@@ -406,7 +384,7 @@ Return JSON format:
         return {"status": "success", "agent": "bear_researcher", "result": result}
     except Exception as e:
         logger.error(f"Bear Researcher failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/research-manager")
@@ -437,10 +415,11 @@ Provide final recommendation in JSON:
         return {"status": "success", "agent": "research_manager", "result": result}
     except Exception as e:
         logger.error(f"Research Manager failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ===== System 2: Team 1 Analyst Endpoints =====
+
 
 @app.post("/agents/fundamentals-analyst")
 async def run_fundamentals_analyst(request: System2Request):
@@ -466,7 +445,7 @@ Provide analysis in JSON:
         return {"status": "success", "agent": "fundamentals_analyst", "result": result}
     except Exception as e:
         logger.error(f"Fundamentals Analyst failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/sentiment-analyst")
@@ -494,7 +473,7 @@ Provide analysis in JSON:
         return {"status": "success", "agent": "sentiment_analyst", "result": result}
     except Exception as e:
         logger.error(f"Sentiment Analyst failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/news-analyst")
@@ -522,7 +501,7 @@ Provide analysis in JSON:
         return {"status": "success", "agent": "news_analyst", "result": result}
     except Exception as e:
         logger.error(f"News Analyst failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/technical-analyst")
@@ -552,10 +531,11 @@ Provide analysis in JSON:
         return {"status": "success", "agent": "technical_analyst", "result": result}
     except Exception as e:
         logger.error(f"Technical Analyst failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ===== System 2: Team 3 Portfolio =====
+
 
 @app.post("/agents/portfolio-manager")
 async def run_portfolio_manager(request: System2Request):
@@ -584,10 +564,11 @@ Provide analysis in JSON:
         return {"status": "success", "agent": "portfolio_manager", "result": result}
     except Exception as e:
         logger.error(f"Portfolio Manager failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ===== System 2: Team 4 Risk & Execution =====
+
 
 @app.post("/agents/risk-manager")
 async def run_risk_manager(request: System2Request):
@@ -616,7 +597,7 @@ Provide analysis in JSON:
         return {"status": "success", "agent": "risk_manager", "result": result}
     except Exception as e:
         logger.error(f"Risk Manager failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/trader")
@@ -649,10 +630,11 @@ Provide execution plan in JSON:
         return {"status": "success", "agent": "trader", "result": result}
     except Exception as e:
         logger.error(f"Trader Agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ===== Custom Agent Endpoints =====
+
 
 @app.post("/agents/custom")
 async def run_custom_agent(request: CustomAgentRequest):
@@ -679,14 +661,10 @@ Stocks to analyze: {request.stocks}
 Provide your analysis in a structured JSON format."""
 
         result = call_gemini(prompt, request.system_prompt)
-        return {
-            "status": "success",
-            "agent": "custom",
-            "result": result
-        }
+        return {"status": "success", "agent": "custom", "result": result}
     except Exception as e:
         logger.error(f"Custom Agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/agents/generate-system-prompt")
@@ -731,13 +709,41 @@ async def generate_system_prompt(request: GenerateSystemPromptRequest):
         team_context = team_contexts.get(request.team, team_contexts["Team 1"])
         category_context = category_contexts.get(request.category, category_contexts["strategy_agent"])
 
-        # Use Gemini to generate the system prompt
-        meta_prompt = f"""You are an expert at creating system prompts for AI agents in a multi-agent trading system.
+        # Build enhanced meta-prompt based on whether description is provided
+        description_text = request.description.strip() if request.description else ""
+
+        if not description_text:
+            # Enhanced prompt for name-only generation
+            meta_prompt = f"""You are an expert at creating system prompts for AI agents in a multi-agent trading system.
 
 Create a detailed system prompt for an agent with the following characteristics:
 
 **Agent Name:** {request.name}
-**Description:** {request.description}
+**Team Context:** {team_context}
+**Category:** {category_context}
+
+IMPORTANT: No description was provided, so you must:
+1. Infer the agent's purpose and responsibilities from its NAME alone
+2. Create a comprehensive, detailed system prompt based on what the name suggests
+3. Define clear responsibilities (3-5 bullet points)
+4. Specify expected input/output formats
+
+The system prompt should:
+1. Define the agent's role and expertise clearly
+2. List specific responsibilities (3-5 bullet points)
+3. Specify the input the agent receives
+4. Define the expected output format (JSON structure preferred)
+5. Include any relevant domain knowledge
+
+Write ONLY the system prompt, nothing else. Start directly with "You are..." """
+        else:
+            # Original meta-prompt with description
+            meta_prompt = f"""You are an expert at creating system prompts for AI agents in a multi-agent trading system.
+
+Create a detailed system prompt for an agent with the following characteristics:
+
+**Agent Name:** {request.name}
+**Description:** {description_text}
 **Team Context:** {team_context}
 **Category:** {category_context}
 
@@ -756,13 +762,23 @@ Write ONLY the system prompt, nothing else. Start directly with "You are..." """
         if isinstance(system_prompt, dict) and "error" in system_prompt:
             raise Exception(system_prompt["error"])
 
-        return {
-            "status": "success",
-            "system_prompt": system_prompt.strip()
-        }
+        # Validate non-empty and minimum length
+        cleaned_prompt = system_prompt.strip()
+        if not cleaned_prompt:
+            raise Exception("AI service generated an empty system prompt. Please try again or provide a description.")
+
+        if len(cleaned_prompt) < 50:
+            raise Exception(
+                "Generated system prompt is too short. Please provide a more descriptive agent name or add a description."
+            )
+
+        return {"status": "success", "system_prompt": cleaned_prompt}
     except Exception as e:
         logger.error(f"System prompt generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate system prompt: {str(e)}. Please try providing a description for better results.",
+        ) from e
 
 
 # ===== Thinking Agent Endpoint =====
@@ -772,7 +788,7 @@ TOOLS_DESCRIPTION = {
     "earnings": "Financial reports, quarterly earnings, EPS history, revenue data",
     "news": "Recent news articles, headlines, and press releases about the stocks",
     "technical": "Technical indicators including RSI, MACD, SMA, EMA, Bollinger Bands",
-    "fundamentals": "Fundamental metrics like P/E ratio, P/B ratio, EPS, dividend yield, market cap"
+    "fundamentals": "Fundamental metrics like P/E ratio, P/B ratio, EPS, dividend yield, market cap",
 }
 
 THINK_PROMPT = """You are an intelligent financial analysis agent with access to data tools.
@@ -806,7 +822,7 @@ def summarize_data(data: dict) -> str:
         return "No data collected yet"
 
     summaries = []
-    for tool_name, tool_data in data.items():
+    for tool_name, _tool_data in data.items():
         if tool_name == "candlestick":
             summaries.append(f"- {tool_name}: price data available")
         elif tool_name == "earnings":
@@ -876,17 +892,14 @@ async def think_step(system_prompt: str, context: dict, available_tools: List[st
     collected_data = context.get("data", {})
 
     # Build tools description for available tools only
-    tools_desc = "\n".join([
-        f"- {tool}: {TOOLS_DESCRIPTION.get(tool, 'Custom data tool')}"
-        for tool in available_tools
-    ])
+    tools_desc = "\n".join([f"- {tool}: {TOOLS_DESCRIPTION.get(tool, 'Custom data tool')}" for tool in available_tools])
 
     # Format the thinking prompt
     prompt = THINK_PROMPT.format(
         system_prompt=system_prompt,
         tools_description=tools_desc,
         stocks=stocks,
-        collected_data_summary=summarize_data(collected_data)
+        collected_data_summary=summarize_data(collected_data),
     )
 
     try:
@@ -900,8 +913,8 @@ async def think_step(system_prompt: str, context: dict, available_tools: List[st
         # Clean up markdown code blocks if present
         clean_response = response.strip()
         if clean_response.startswith("```"):
-            clean_response = re.sub(r'^```(?:json)?\s*', '', clean_response)
-            clean_response = re.sub(r'\s*```$', '', clean_response)
+            clean_response = re.sub(r"^```(?:json)?\s*", "", clean_response)
+            clean_response = re.sub(r"\s*```$", "", clean_response)
 
         thought = json.loads(clean_response)
         return thought
@@ -945,8 +958,8 @@ Provide your final analysis in JSON format. Include:
         # Try to parse as JSON, otherwise return as text
         clean_response = response.strip()
         if clean_response.startswith("```"):
-            clean_response = re.sub(r'^```(?:json)?\s*', '', clean_response)
-            clean_response = re.sub(r'\s*```$', '', clean_response)
+            clean_response = re.sub(r"^```(?:json)?\s*", "", clean_response)
+            clean_response = re.sub(r"\s*```$", "", clean_response)
 
         try:
             return json.loads(clean_response)
@@ -1020,10 +1033,7 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
         logger.info(f"Running Thinking Agent for {request.stocks}")
 
         thinking_steps = []
-        context = {
-            "stocks": request.stocks,
-            "data": request.input_data.copy() if request.input_data else {}
-        }
+        context = {"stocks": request.stocks, "data": request.input_data.copy() if request.input_data else {}}
         final_result = None
         tools_used = []
 
@@ -1031,11 +1041,7 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
             logger.info(f"Thinking iteration {iteration}/{request.max_iterations}")
 
             # Step 1: Think - what do I need?
-            thought = await think_step(
-                request.system_prompt,
-                context,
-                request.available_tools
-            )
+            thought = await think_step(request.system_prompt, context, request.available_tools)
 
             action = thought.get("action", "generate_response")
             reasoning = thought.get("reasoning", "")
@@ -1046,22 +1052,26 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
 
                 # Validate tool is available
                 if tool_name not in request.available_tools:
-                    thinking_steps.append({
-                        "iteration": iteration,
-                        "thought": reasoning,
-                        "action": "error",
-                        "error": f"Tool '{tool_name}' not in available tools"
-                    })
+                    thinking_steps.append(
+                        {
+                            "iteration": iteration,
+                            "thought": reasoning,
+                            "action": "error",
+                            "error": f"Tool '{tool_name}' not in available tools",
+                        }
+                    )
                     continue
 
                 # Skip if already have this data
                 if tool_name in context["data"]:
-                    thinking_steps.append({
-                        "iteration": iteration,
-                        "thought": reasoning,
-                        "action": "skip",
-                        "message": f"Already have {tool_name} data"
-                    })
+                    thinking_steps.append(
+                        {
+                            "iteration": iteration,
+                            "thought": reasoning,
+                            "action": "skip",
+                            "message": f"Already have {tool_name} data",
+                        }
+                    )
                     continue
 
                 # Execute the tool
@@ -1069,13 +1079,15 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
                 context["data"][tool_name] = tool_result
                 tools_used.append(tool_name)
 
-                thinking_steps.append({
-                    "iteration": iteration,
-                    "thought": reasoning,
-                    "action": "call_tool",
-                    "tool": tool_name,
-                    "tool_result_summary": summarize_tool_result(tool_name, tool_result)
-                })
+                thinking_steps.append(
+                    {
+                        "iteration": iteration,
+                        "thought": reasoning,
+                        "action": "call_tool",
+                        "tool": tool_name,
+                        "tool_result_summary": summarize_tool_result(tool_name, tool_result),
+                    }
+                )
 
             elif action == "create_data_agent":
                 # PAUSE execution - need custom data agent
@@ -1083,16 +1095,18 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
                 agent_description = thought.get("agent_description", "")
                 data_type = thought.get("data_type", "specialized data")
 
-                thinking_steps.append({
-                    "iteration": iteration,
-                    "thought": reasoning,
-                    "action": "need_custom_data_agent",
-                    "suggested_data_agent": {
-                        "name": agent_name,
-                        "description": agent_description,
-                        "data_type": data_type
+                thinking_steps.append(
+                    {
+                        "iteration": iteration,
+                        "thought": reasoning,
+                        "action": "need_custom_data_agent",
+                        "suggested_data_agent": {
+                            "name": agent_name,
+                            "description": agent_description,
+                            "data_type": data_type,
+                        },
                     }
-                })
+                )
 
                 return {
                     "status": "paused",
@@ -1104,72 +1118,72 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
                         "name": agent_name,
                         "description": agent_description,
                         "data_type": data_type,
-                        "suggested_system_prompt": generate_data_agent_prompt(thought)
+                        "suggested_system_prompt": generate_data_agent_prompt(thought),
                     },
                     "resume_context": {
                         "stocks": request.stocks,
                         "system_prompt": request.system_prompt,
                         "collected_data": context["data"],
-                        "iteration": iteration
+                        "iteration": iteration,
                     },
                     "tools_used": tools_used,
-                    "iterations_used": iteration
+                    "iterations_used": iteration,
                 }
 
             elif action == "generate_response":
                 # Final analysis - generate response
                 final_result = await generate_final_response(request.system_prompt, context)
 
-                thinking_steps.append({
-                    "iteration": iteration,
-                    "thought": reasoning,
-                    "action": "generate_response",
-                    "result": final_result
-                })
+                thinking_steps.append(
+                    {
+                        "iteration": iteration,
+                        "thought": reasoning,
+                        "action": "generate_response",
+                        "result": final_result,
+                    }
+                )
                 break
 
             else:
                 # Unknown action - default to generating response
                 logger.warning(f"Unknown action: {action}, generating response")
                 final_result = await generate_final_response(request.system_prompt, context)
-                thinking_steps.append({
-                    "iteration": iteration,
-                    "thought": f"Unknown action '{action}', generating response",
-                    "action": "generate_response",
-                    "result": final_result
-                })
+                thinking_steps.append(
+                    {
+                        "iteration": iteration,
+                        "thought": f"Unknown action '{action}', generating response",
+                        "action": "generate_response",
+                        "result": final_result,
+                    }
+                )
                 break
 
         # If we exhausted iterations without generating response, do it now
         if final_result is None:
             final_result = await generate_final_response(request.system_prompt, context)
-            thinking_steps.append({
-                "iteration": request.max_iterations,
-                "thought": "Max iterations reached, generating final response",
-                "action": "generate_response",
-                "result": final_result
-            })
+            thinking_steps.append(
+                {
+                    "iteration": request.max_iterations,
+                    "thought": "Max iterations reached, generating final response",
+                    "action": "generate_response",
+                    "result": final_result,
+                }
+            )
 
         return {
             "status": "success",
             "final_result": final_result,
             "thinking_steps": thinking_steps,
             "tools_used": list(set(tools_used)),
-            "iterations_used": len(thinking_steps)
+            "iterations_used": len(thinking_steps),
         }
 
     except Exception as e:
         logger.error(f"Thinking Agent failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        "api_server:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run("api_server:app", host="0.0.0.0", port=8001, reload=True, log_level="info")
