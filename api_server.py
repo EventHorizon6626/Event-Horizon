@@ -673,8 +673,8 @@ Provide your analysis in a structured JSON format."""
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/agents/generate-system-prompt")
-async def generate_system_prompt(request: GenerateSystemPromptRequest):
+@app.post("/agents/generate-agent-system-prompt")
+async def generate_agent_system_prompt(request: GenerateSystemPromptRequest):
     """
     Generate a system prompt from agent name, description, and category.
 
