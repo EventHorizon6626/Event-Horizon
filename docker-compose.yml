@@ -9,9 +9,9 @@ services:
     ports:
       - "127.0.0.1:8001:8001"
 
-    # Load environment from .env.production for Docker deployment
+    # Load environment from .env
     env_file:
-      - .env.production
+      - .env
 
     volumes:
       - ai-results:/app/results
