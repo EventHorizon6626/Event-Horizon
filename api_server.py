@@ -301,7 +301,6 @@ class GenerateSystemPromptRequest(BaseModel):
 
     name: str
     description: Optional[str] = ""  # Make optional with empty default
-    team: Optional[str] = "Team 1"
     category: Optional[str] = "strategy_agent"
 
 
@@ -677,13 +676,12 @@ Provide your analysis in a structured JSON format."""
 @app.post("/agents/generate-system-prompt")
 async def generate_system_prompt(request: GenerateSystemPromptRequest):
     """
-    Generate a system prompt from agent name, description, and team context.
+    Generate a system prompt from agent name, description, and category.
 
     Request body:
     {
         "name": "Dividend Hunter",
         "description": "An agent that finds high-yield dividend stocks",
-        "team": "Team 1",
         "category": "strategy_agent"
     }
 
@@ -696,24 +694,21 @@ async def generate_system_prompt(request: GenerateSystemPromptRequest):
     try:
         logger.info(f"Generating system prompt for agent: {request.name}")
 
-        # Define team context
-        team_contexts = {
-            "Team 1": "Market Analysis team. Your role is to analyze market data and provide insights. You work alongside Fundamentals Analyst, Sentiment Analyst, News Analyst, and Technical Analyst.",
-            "Team 2": "Bull/Bear Debate team. Your role is to build investment cases and debate. You work alongside Bull Researcher, Bear Researcher, and Research Manager.",
-            "Team 3": "Portfolio Optimization team. Your role is to manage portfolio allocation and position sizing. You work with the Portfolio Manager.",
-            "Team 4": "Risk Assessment team. Your role is to evaluate risk and execution. You work alongside Risk Manager and Trader Agent.",
-        }
-
+        # Define category contexts
         category_contexts = {
-            "strategy_agent": "You provide strategic investment recommendations based on your analysis.",
-            "risk_manager": "You evaluate and manage risk for investment decisions.",
+            "market_analyzer": "You analyze market data, trends, and patterns to provide investment insights.",
+            "risk_analyzer": "You evaluate and manage risk for investment decisions, focusing on portfolio safety.",
+            "bull_bear_analyzer": "You provide balanced analysis of both bullish and bearish perspectives on investments.",
+            "sentiment_analyzer": "You analyze market sentiment from news, social media, and public opinion.",
+            "technical_analyzer": "You perform technical analysis on price charts and trading indicators.",
+            "fundamental_analyzer": "You analyze company fundamentals, financials, and intrinsic value.",
             "custom_analyzer": "You perform specialized analysis based on your unique focus area.",
+            "strategy_agent": "You provide strategic investment recommendations based on your analysis.",
             "data_retriever": "You retrieve and process financial data for other agents.",
             "news_agent": "You analyze news and market sentiment.",
             "technical_agent": "You perform technical analysis on price and volume data.",
         }
 
-        team_context = team_contexts.get(request.team, team_contexts["Team 1"])
         category_context = category_contexts.get(request.category, category_contexts["strategy_agent"])
 
         # Build enhanced meta-prompt based on whether description is provided
@@ -726,7 +721,6 @@ async def generate_system_prompt(request: GenerateSystemPromptRequest):
 Create a detailed system prompt for an agent with the following characteristics:
 
 **Agent Name:** {request.name}
-**Team Context:** {team_context}
 **Category:** {category_context}
 
 IMPORTANT: No description was provided, so you must:
@@ -751,7 +745,6 @@ Create a detailed system prompt for an agent with the following characteristics:
 
 **Agent Name:** {request.name}
 **Description:** {description_text}
-**Team Context:** {team_context}
 **Category:** {category_context}
 
 The system prompt should:
@@ -786,6 +779,61 @@ Write ONLY the system prompt, nothing else. Start directly with "You are..." """
             status_code=500,
             detail=f"Failed to generate system prompt: {str(e)}. Please try providing a description for better results.",
         ) from e
+
+
+# ===== Bull-Bear Analyzer Endpoint =====
+
+
+@app.post("/agents/bull-bear-analyzer")
+async def run_bull_bear_analyzer(request: System2Request):
+    """
+    Run the Bull-Bear coupled analyzer that performs internal debate.
+    Returns both bull argument, bear counter-argument, and synthesized thesis.
+
+    Request body:
+    {
+        "stocks": ["AAPL", "GOOGL"],
+        "data": {...}  # Optional Stage3Output data
+    }
+
+    Returns:
+    {
+        "status": "success",
+        "agent": "bull_bear_analyzer",
+        "result": {
+            "bull_bear_output": {...},
+            "total_debates": 2,
+            "total_tokens_used": 1234,
+            "execution_time_seconds": 5.67
+        }
+    }
+    """
+    try:
+        from event_horizon.analyzer_system import BullBearAnalyzer
+        from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
+
+        analyzer = BullBearAnalyzer(
+            config={
+                "llm_model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "enable_opik": False,
+            }
+        )
+
+        # Convert request data to Stage3Output format if needed
+        # For now, we'll use a simplified approach
+        stage3_data = Stage3Output(
+            portfolio_id=f"portfolio_{'-'.join(request.stocks)}",
+            symbols=request.stocks,
+            symbol_features=request.data or {},
+        )
+
+        result = analyzer.execute(stage3_data)
+
+        return {"status": "success", "agent": "bull_bear_analyzer", "result": result}
+    except Exception as e:
+        logger.error(f"Bull-Bear Analyzer failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ===== Thinking Agent Endpoint =====

@@ -7,27 +7,28 @@ and downside potential.
 🎯 OPIK INTEGRATION: Every argument is traced for evaluation.
 """
 
-import logging
 import json
+import logging
 import os
 from typing import Any, Dict
 
 try:
-    import opik
     from opik import track
     from opik.integrations.openai import track_openai
+
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
 
 try:
     from openai import OpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
 
+from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import BearArgument, BullArgument
 from event_horizon.data_pipeline.stage_3.models.schemas import SymbolFeatures
-from event_horizon.analyzer_system.team_2_researchers.models.schemas import BearArgument, BullArgument
 
 
 class BearResearcher:
@@ -51,7 +52,7 @@ class BearResearcher:
                 - enable_opik: Enable Opik tracking
         """
         self.config = config or {}
-        self.logger = logging.getLogger("analyzer.team2.bear")
+        self.logger = logging.getLogger("analyzer.bull_bear.bear")
 
         self.llm_model = self.config.get("llm_model", "gpt-4o-mini")
         self.temperature = self.config.get("temperature", 0.7)  # Higher for creative arguments
@@ -159,9 +160,7 @@ class BearResearcher:
         return "\n".join(parts)
 
     @track(name="bear_llm_call")
-    def _call_llm_for_argument(
-        self, symbol: str, context: str, bull_context: str = ""
-    ) -> Dict[str, Any]:
+    def _call_llm_for_argument(self, symbol: str, context: str, bull_context: str = "") -> Dict[str, Any]:
         """Call LLM to generate bear argument"""
         prompt = f"""You are a BEARISH investment researcher. Your job is to argue WHY {symbol} will GO DOWN.
 
@@ -176,7 +175,7 @@ Generate a STRONG BEARISH argument for selling/shorting {symbol}. Be skeptical a
 - Competitive disadvantages
 - Unfavorable market conditions
 
-{f"COUNTER the bull's argument. Show why their thesis is wrong!" if bull_context else ""}
+{"COUNTER the bull's argument. Show why their thesis is wrong!" if bull_context else ""}
 
 Return JSON:
 {{

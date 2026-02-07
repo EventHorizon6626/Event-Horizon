@@ -1,8 +1,8 @@
 """Team 2 Models"""
 
 from event_horizon.analyzer_system.team_2_researchers.models.schemas import (
-    BullArgument,
     BearArgument,
+    BullArgument,
     InvestmentThesis,
     Team2Output,
 )
