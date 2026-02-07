@@ -7,27 +7,28 @@ positive catalysts, and upside potential.
 🎯 OPIK INTEGRATION: Every argument is traced for evaluation.
 """
 
-import logging
 import json
+import logging
 import os
 from typing import Any, Dict
 
 try:
-    import opik
     from opik import track
     from opik.integrations.openai import track_openai
+
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
 
 try:
     from openai import OpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
 
+from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import BullArgument
 from event_horizon.data_pipeline.stage_3.models.schemas import SymbolFeatures
-from event_horizon.analyzer_system.team_2_researchers.models.schemas import BullArgument
 
 
 class BullResearcher:
@@ -51,7 +52,7 @@ class BullResearcher:
                 - enable_opik: Enable Opik tracking
         """
         self.config = config or {}
-        self.logger = logging.getLogger("analyzer.team2.bull")
+        self.logger = logging.getLogger("analyzer.bull_bear.bull")
 
         self.llm_model = self.config.get("llm_model", "gpt-4o-mini")
         self.temperature = self.config.get("temperature", 0.7)  # Higher for creative arguments

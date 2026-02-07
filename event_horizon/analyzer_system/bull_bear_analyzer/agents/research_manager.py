@@ -7,28 +7,29 @@ Acts as the moderator and decision-maker in the debate.
 🎯 OPIK INTEGRATION: Synthesis process is fully traced.
 """
 
-import logging
 import json
+import logging
 import os
 from typing import Any, Dict
 
 try:
-    import opik
     from opik import track
     from opik.integrations.openai import track_openai
+
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
 
 try:
     from openai import OpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
 
-from event_horizon.analyzer_system.team_2_researchers.models.schemas import (
-    BullArgument,
+from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import (
     BearArgument,
+    BullArgument,
     InvestmentThesis,
 )
 
@@ -54,7 +55,7 @@ class ResearchManager:
                 - enable_opik: Enable Opik tracking
         """
         self.config = config or {}
-        self.logger = logging.getLogger("analyzer.team2.manager")
+        self.logger = logging.getLogger("analyzer.bull_bear.manager")
 
         self.llm_model = self.config.get("llm_model", "gpt-4o-mini")
         self.temperature = self.config.get("temperature", 0.4)  # Lower for balanced analysis
@@ -132,9 +133,7 @@ class ResearchManager:
 
         return thesis
 
-    def _prepare_debate_context(
-        self, bull_argument: BullArgument, bear_argument: BearArgument
-    ) -> str:
+    def _prepare_debate_context(self, bull_argument: BullArgument, bear_argument: BearArgument) -> str:
         """Prepare debate context for synthesis"""
         context = f"""BULL CASE:
 Recommendation: {bull_argument.recommendation} (confidence: {bull_argument.confidence:.2f})
@@ -200,9 +199,7 @@ Be OBJECTIVE and BALANCED. Consider both sides fairly."""
             "total_tokens": response.usage.total_tokens,
         }
 
-    def _parse_response(
-        self, thesis: InvestmentThesis, result: Dict[str, Any]
-    ) -> InvestmentThesis:
+    def _parse_response(self, thesis: InvestmentThesis, result: Dict[str, Any]) -> InvestmentThesis:
         """Parse LLM response into InvestmentThesis"""
         try:
             data = json.loads(result["content"])

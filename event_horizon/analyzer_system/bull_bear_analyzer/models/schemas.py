@@ -1,12 +1,12 @@
 """
-Team 2: Bull/Bear Debate Schemas
+Bull-Bear Analyzer: Debate Schemas
 
-Output structures for the researcher debate system.
+Output structures for the bull/bear debate system.
 """
 
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -127,9 +127,9 @@ class InvestmentThesis:
 
 
 @dataclass
-class Team2Output:
+class BullBearAnalysisOutput:
     """
-    Complete Team 2 output for a portfolio
+    Complete Bull-Bear analysis output for a portfolio
 
     Contains bull/bear debates and investment theses for all symbols.
     """

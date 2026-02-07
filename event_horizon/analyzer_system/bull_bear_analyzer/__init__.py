@@ -1,5 +1,5 @@
 """
-Team 2: Researcher Team
+Bull-Bear Analyzer
 
 Bull vs Bear debate for investment thesis development.
 
@@ -19,12 +19,12 @@ Output: Investment thesis with bull/bear cases and probability-weighted scenario
 Status: IMPLEMENTED ✅ (with Opik!)
 """
 
-from event_horizon.analyzer_system.team_2_researchers.orchestrator import Team2Orchestrator
-from event_horizon.analyzer_system.team_2_researchers.models.schemas import (
-    Team2Output,
-    InvestmentThesis,
-    BullArgument,
+from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import (
     BearArgument,
+    BullArgument,
+    BullBearAnalysisOutput,
+    InvestmentThesis,
 )
+from event_horizon.analyzer_system.bull_bear_analyzer.orchestrator.bull_bear_orchestrator import BullBearAnalyzer
 
-__all__ = ["Team2Orchestrator", "Team2Output", "InvestmentThesis", "BullArgument", "BearArgument"]
+__all__ = ["BullBearAnalyzer", "BullBearAnalysisOutput", "InvestmentThesis", "BullArgument", "BearArgument"]
