@@ -184,14 +184,17 @@ async def run_custom_agent(request: CustomAgentRequest):
         logger.info("Custom Agent: think_step action=%s", action)
 
         if action == "create_data_agent":
+            agent_name = thought.get("agent_name", "custom-data-agent")
+            agent_desc = thought.get("agent_description", "")
+            logger.info("Custom Agent: creating data agent name=%s, description=%s, reasoning=%s", agent_name, agent_desc, thought.get("reasoning", ""))
             return AnalysisResponse(
                 status="needs_data",
                 model=LLM_MODEL,
                 analysis=None,
                 required_agents=[
                     {
-                        "name": thought.get("agent_name", "custom-data-agent"),
-                        "description": thought.get("agent_description", ""),
+                        "name": agent_name,
+                        "description": agent_desc,
                         "type": "data",
                         "source": "web_search",
                         "system_prompt": generate_data_agent_prompt(thought),
@@ -203,6 +206,7 @@ async def run_custom_agent(request: CustomAgentRequest):
 
         if action == "call_tool":
             tool_name = thought.get("tool", "")
+            logger.info("Custom Agent: needs built-in tool=%s, reasoning=%s", tool_name, thought.get("reasoning", ""))
             if tool_name in TOOLS_DESCRIPTION:
                 return AnalysisResponse(
                     status="needs_data",
@@ -222,8 +226,10 @@ async def run_custom_agent(request: CustomAgentRequest):
                 )
 
         # action == "generate_response" — LLM thinks it can answer without data
+        logger.info("Custom Agent: generating response directly (no data needed), reasoning=%s", thought.get("reasoning", ""))
         user_prompt = request.user_prompt or f"Analyze the following stocks: {request.stocks}"
         result = await call_llm(user_prompt, request.system_prompt)
+        logger.info("Custom Agent: response complete, status=success")
         return AnalysisResponse(
             status="success",
             analysis=result,
