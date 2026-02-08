@@ -104,12 +104,14 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
         from event_horizon.analyzer_system import BullBearAnalyzer
         from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output, SymbolFeatures
 
+        logger.info("Bull-Bear Analyzer: starting for stocks=%s", request.stocks)
         analyzer = BullBearAnalyzer(
             config={"llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"), "temperature": 0.7, "enable_opik": False}
         )
         # Convert raw dicts to SymbolFeatures objects
         import dataclasses
         raw_features = request.data or {}
+        logger.debug("Bull-Bear Analyzer: converting %d symbol features from raw dicts", len(raw_features))
         valid_fields = {f.name for f in dataclasses.fields(SymbolFeatures)}
         symbol_features = {}
         for sym, feat in raw_features.items():
@@ -125,6 +127,7 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
             symbol_features=symbol_features,
         )
         result = await asyncio.to_thread(analyzer.execute, stage3_data)
+        logger.info("Bull-Bear Analyzer: complete for stocks=%s", request.stocks)
         return {"status": "success", "agent": "bull_bear_analyzer", "result": result}
     except Exception as e:
         logger.error(f"Bull-Bear Analyzer failed: {e}")
@@ -147,6 +150,7 @@ async def run_custom_agent(request: CustomAgentRequest):
         # ── Path A: we already have data from connected nodes ──
         # input_data is expected to be SymbolFeatures (EH DNA) from the pipeline
         if request.input_data:
+            logger.info("Custom Agent: Path A — using provided input_data")
             user_prompt = request.user_prompt or f"Analyze the following stocks: {request.stocks}"
             data_summary = json.dumps(request.input_data, indent=2, default=str)[:8000]
             messages = [
@@ -172,10 +176,12 @@ async def run_custom_agent(request: CustomAgentRequest):
             )
 
         # ── Path B: no data — discover what's needed ──
+        logger.info("Custom Agent: Path B — discovering required data")
         available_tools = list(TOOLS_DESCRIPTION.keys())
         context = {"stocks": request.stocks, "data": {}}
         thought = await think_step(request.system_prompt, context, available_tools)
         action = thought.get("action", "generate_response")
+        logger.info("Custom Agent: think_step action=%s", action)
 
         if action == "create_data_agent":
             return AnalysisResponse(
@@ -293,6 +299,7 @@ async def generate_agent_system_prompt(request: GenerateSystemPromptRequest):
         system_prompt = await call_llm(meta_prompt)
 
         cleaned_prompt = system_prompt.strip()
+        logger.info("Generated system prompt: length=%d", len(cleaned_prompt))
         if not cleaned_prompt:
             raise Exception("AI service generated an empty system prompt. Please try again or provide a description.")
         if len(cleaned_prompt) < 50:
@@ -321,6 +328,7 @@ async def run_thinking_agent(request: ThinkingAgentRequest):
             max_iterations=request.max_iterations,
             available_tools=request.available_tools,
         )
+        logger.info("Thinking Agent complete: status=%s, iterations=%s", result.get("status"), result.get("iterations_used"))
         return result
     except Exception as e:
         logger.error(f"Thinking Agent failed: {e}")

@@ -1,10 +1,13 @@
 """Agent registry — stores and manages agent configurations."""
 
 import json
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 AGENTS_FILE = os.getenv("AGENTS_FILE", "/data/agents.json")
 
@@ -22,12 +25,16 @@ class AgentStore:
         if os.path.exists(AGENTS_FILE):
             with open(AGENTS_FILE, "r") as f:
                 self.agents = json.load(f)
+            logger.info("Loaded %d agents from %s", len(self.agents), AGENTS_FILE)
+        else:
+            logger.info("No agents file found at %s, starting empty", AGENTS_FILE)
 
     def _save(self):
         """Persist agents to disk."""
         os.makedirs(os.path.dirname(AGENTS_FILE), exist_ok=True)
         with open(AGENTS_FILE, "w") as f:
             json.dump(self.agents, f, indent=2)
+        logger.debug("Saved %d agents to %s", len(self.agents), AGENTS_FILE)
 
     def create(
         self,
@@ -55,6 +62,7 @@ class AgentStore:
 
         # Skip if agent_id already exists (idempotent seeding)
         if agent_id in self.agents:
+            logger.debug("create: skipped existing agent_id=%s name=%s", agent_id, name)
             return self.agents[agent_id]
 
         agent = {
@@ -71,9 +79,11 @@ class AgentStore:
         }
         self.agents[agent_id] = agent
         self._save()
+        logger.info("Created agent: id=%s, name=%s, type=%s", agent_id, name, agent_type)
         return agent
 
     def get(self, agent_id: str) -> Optional[dict]:
+        logger.debug("get: agent_id=%s, found=%s", agent_id, agent_id in self.agents)
         return self.agents.get(agent_id)
 
     def get_by_name(self, name: str) -> Optional[dict]:
@@ -92,19 +102,23 @@ class AgentStore:
         if not agent:
             return False
         if not agent.get("deletable", True):
+            logger.warning("Attempted delete of non-deletable agent: id=%s, name=%s", agent_id, agent["name"])
             raise ValueError(f"Cannot delete built-in agent '{agent['name']}'")
         del self.agents[agent_id]
         self._save()
+        logger.info("Deleted agent: id=%s, name=%s", agent_id, agent["name"])
         return True
 
     def update(self, agent_id: str, **kwargs) -> Optional[dict]:
         agent = self.agents.get(agent_id)
         if not agent:
             return None
+        updated_fields = [k for k, v in kwargs.items() if v is not None and k in agent]
         for key, value in kwargs.items():
             if value is not None and key in agent:
                 agent[key] = value
         self._save()
+        logger.info("Updated agent: id=%s, fields=%s", agent_id, updated_fields)
         return agent
 
 

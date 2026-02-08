@@ -21,6 +21,7 @@ async def analyze(request: AnalysisRequest):
     If stocks are provided but no data is available, returns a needs_data
     response listing the EH Stage 1 agents that should be run first.
     """
+    logger.info("Analyze request: stocks=%s, task=%s", request.stocks, request.task[:80] if request.task else None)
     has_data = bool(request.financial_data) or bool(request.earnings_data) or bool(request.news_data)
     if not has_data and request.metadata and isinstance(request.metadata, dict):
         has_data = any(bool(v) for v in request.metadata.values())
@@ -62,8 +63,10 @@ async def analyze(request: AnalysisRequest):
     try:
         result = await call_llm_full(messages, temperature=temperature, max_tokens=max_tokens)
     except Exception as e:
+        logger.error("Analyze failed: %s", e)
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")
 
+    logger.info("Analyze complete: stocks=%s, status=success", request.stocks)
     return AnalysisResponse(
         reasoning=result["reasoning"], analysis=result["content"],
         model=result["model"], status="success",
@@ -74,6 +77,7 @@ async def analyze(request: AnalysisRequest):
 @router.post("/analyze/stream")
 async def analyze_stream(request: AnalysisRequest):
     """Stream the analysis response as server-sent events."""
+    logger.info("Analyze stream request: stocks=%s", request.stocks)
     system_prompt = request.system_prompt if request.system_prompt else SYSTEM_PROMPT
 
     user_prompt = build_user_prompt(
@@ -92,6 +96,7 @@ async def analyze_stream(request: AnalysisRequest):
     temperature = request.temperature if request.temperature is not None else 1.0
     max_tokens = request.max_tokens if request.max_tokens is not None else 4096
 
+    logger.debug("Analyze stream: starting SSE response")
     return StreamingResponse(
         stream_llm(messages, temperature=temperature, max_tokens=max_tokens),
         media_type="text/event-stream",
