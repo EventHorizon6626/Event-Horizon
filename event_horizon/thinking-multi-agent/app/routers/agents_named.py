@@ -369,36 +369,41 @@ async def generate_agent_system_prompt(request: GenerateSystemPromptRequest):
         if not description_text:
             meta_prompt = (
                 f"You are an expert at creating system prompts for AI agents in a multi-agent trading system.\n\n"
-                f"Create a detailed system prompt for an agent with the following characteristics:\n\n"
+                f"Create a focused system prompt for an agent with the following characteristics:\n\n"
                 f"**Agent Name:** {request.name}\n"
                 f"**Category:** {category_context}\n\n"
-                f"IMPORTANT: No description was provided, so you must:\n"
-                f"1. Infer the agent's purpose and responsibilities from its NAME alone\n"
-                f"2. Create a comprehensive, detailed system prompt based on what the name suggests\n"
-                f"3. Define clear responsibilities (3-5 bullet points)\n"
-                f"4. Specify expected input/output formats\n\n"
+                f"IMPORTANT: No description was provided, so infer the agent's purpose from its NAME.\n\n"
+                f"CONSTRAINTS:\n"
+                f"- Keep the prompt concise: 800-1500 characters maximum\n"
+                f"- Define 3-5 specific responsibilities inferred from the name\n"
+                f"- Use a simple JSON output format relevant to the inferred task\n"
+                f"- Do NOT add unrelated analysis domains or data requirements\n\n"
                 f"The system prompt should:\n"
-                f"1. Define the agent's role and expertise clearly\n"
-                f"2. List specific responsibilities (3-5 bullet points)\n"
-                f"3. Specify the input the agent receives\n"
-                f"4. Define the expected output format (JSON structure preferred)\n"
-                f"5. Include any relevant domain knowledge\n\n"
-                f'Write ONLY the system prompt, nothing else. Start directly with "You are..."'
+                f"1. Define the agent's role based on its name\n"
+                f"2. List 3-5 responsibilities tied to the inferred purpose\n"
+                f"3. Specify expected input (stocks list + relevant data)\n"
+                f"4. Define a concise JSON output format\n\n"
+                f'Write ONLY the system prompt. Start directly with "You are..."'
             )
         else:
             meta_prompt = (
                 f"You are an expert at creating system prompts for AI agents in a multi-agent trading system.\n\n"
-                f"Create a detailed system prompt for an agent with the following characteristics:\n\n"
+                f"Create a focused system prompt for an agent with the following characteristics:\n\n"
                 f"**Agent Name:** {request.name}\n"
                 f"**Description:** {description_text}\n"
                 f"**Category:** {category_context}\n\n"
+                f"IMPORTANT CONSTRAINTS:\n"
+                f"- Stay strictly focused on what the description says — do NOT expand scope\n"
+                f"- Keep the prompt concise: 800-1500 characters maximum\n"
+                f"- Define 3-5 specific responsibilities directly related to the description\n"
+                f"- Use a simple JSON output format relevant to the described task (not exhaustive)\n"
+                f"- Do NOT add unrelated analysis domains or data requirements\n\n"
                 f"The system prompt should:\n"
-                f"1. Define the agent's role and expertise clearly\n"
-                f"2. List specific responsibilities (3-5 bullet points)\n"
-                f"3. Specify the input the agent receives\n"
-                f"4. Define the expected output format (JSON structure preferred)\n"
-                f"5. Include any relevant domain knowledge\n\n"
-                f'Write ONLY the system prompt, nothing else. Start directly with "You are..."'
+                f"1. Define the agent's role based on the description\n"
+                f"2. List 3-5 responsibilities tied to the description\n"
+                f"3. Specify expected input (stocks list + relevant data)\n"
+                f"4. Define a concise JSON output format\n\n"
+                f'Write ONLY the system prompt. Start directly with "You are..."'
             )
 
         logger.info("System prompt generation: meta_prompt_len=%d", len(meta_prompt))
