@@ -95,11 +95,9 @@ Full Analysis:  ~4-15s (5 agents)
 ### New Files
 ```
 Event-Horizon-AI/
-├── api_server.py              # FastAPI REST API
 ├── deploy_docker.sh           # Continuous deployment
-├── docker-compose.yml         # Updated for port 8001
-├── docker-compose.prod.yml    # Production config
-├── evth-ai.service           # Systemd service (alternative)
+├── docker-compose.yml         # Single compose (port 8030)
+├── Dockerfile                 # Single Dockerfile (vLLM base)
 ├── DEPLOYMENT.md             # Deployment guide
 ├── API.md                    # API documentation
 ├── QUICKSTART.md             # 5-minute setup guide
@@ -107,10 +105,12 @@ Event-Horizon-AI/
     └── CHECKPOINT-02.md      # This file
 ```
 
+> **Note:** `api_server.py`, `docker-compose.prod.yml`, and `evth-ai.service` were removed
+> in the Docker consolidation. The unified app lives at `event_horizon/thinking-multi-agent/app/main.py`.
+
 ### Modified Files
 ```
 Event-Horizon-AI/
-├── Dockerfile                # Updated CMD to run uvicorn
 ├── requirements.txt          # yfinance >= 1.1.0
 └── .gitignore               # Exclude stage1 outputs
 

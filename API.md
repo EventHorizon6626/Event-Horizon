@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:8001
+http://localhost:8030
 ```
 
 ## Authentication
@@ -233,7 +233,7 @@ Returns list of available data agents and their configurations.
 
 ### cURL
 ```bash
-curl -X POST http://localhost:8001/api/v1/analyze-portfolio \
+curl -X POST http://localhost:8030/api/v1/analyze-portfolio \
   -H "Content-Type: application/json" \
   -d '{
     "portfolio": ["AAPL", "TSLA", "NVDA"],
@@ -246,7 +246,7 @@ curl -X POST http://localhost:8001/api/v1/analyze-portfolio \
 const axios = require('axios');
 
 async function analyzePortfolio() {
-  const response = await axios.post('http://localhost:8001/api/v1/analyze-portfolio', {
+  const response = await axios.post('http://localhost:8030/api/v1/analyze-portfolio', {
     portfolio: ['AAPL', 'TSLA', 'NVDA'],
     portfolio_id: 'tech_stocks_2026'
   });
@@ -259,7 +259,7 @@ async function analyzePortfolio() {
 ```python
 import requests
 
-response = requests.post('http://localhost:8001/api/v1/analyze-portfolio', json={
+response = requests.post('http://localhost:8030/api/v1/analyze-portfolio', json={
     'portfolio': ['AAPL', 'TSLA', 'NVDA'],
     'portfolio_id': 'tech_stocks_2026'
 })
@@ -274,7 +274,7 @@ print(data)
 
 CORS is enabled for all origins (`*`) by default.
 
-**Production**: Update `api_server.py` to restrict origins:
+**Production**: Update CORS in `event_horizon/thinking-multi-agent/app/main.py` to restrict origins:
 ```python
 app.add_middleware(
     CORSMiddleware,

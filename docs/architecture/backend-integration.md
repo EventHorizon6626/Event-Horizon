@@ -624,7 +624,7 @@ sudo lsof -i :5000
 
 ### CORS errors
 
-The AI service already has CORS configured. Make sure your backend domain is allowed in `api_server.py:36-48`.
+The AI service already has CORS configured. Make sure your backend domain is allowed in `event_horizon/thinking-multi-agent/app/main.py`.
 
 ### Timeout errors
 
