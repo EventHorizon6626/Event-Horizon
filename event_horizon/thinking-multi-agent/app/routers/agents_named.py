@@ -95,15 +95,27 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
         import asyncio
 
         from event_horizon.analyzer_system import BullBearAnalyzer
-        from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
+        from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output, SymbolFeatures
 
         analyzer = BullBearAnalyzer(
             config={"llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"), "temperature": 0.7, "enable_opik": False}
         )
+        # Convert raw dicts to SymbolFeatures objects
+        import dataclasses
+        raw_features = request.data or {}
+        valid_fields = {f.name for f in dataclasses.fields(SymbolFeatures)}
+        symbol_features = {}
+        for sym, feat in raw_features.items():
+            if isinstance(feat, dict):
+                filtered = {k: v for k, v in feat.items() if k in valid_fields}
+                filtered["symbol"] = sym
+                symbol_features[sym] = SymbolFeatures(**filtered)
+            else:
+                symbol_features[sym] = feat
         stage3_data = Stage3Output(
             portfolio_id=f"portfolio_{'-'.join(request.stocks)}",
             symbols=request.stocks,
-            symbol_features=request.data or {},
+            symbol_features=symbol_features,
         )
         result = await asyncio.to_thread(analyzer.execute, stage3_data)
         return {"status": "success", "agent": "bull_bear_analyzer", "result": result}
