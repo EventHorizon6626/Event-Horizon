@@ -202,8 +202,12 @@ async def run_custom_agent(request: CustomAgentRequest):
                 agent_name="custom",
             )
 
-        # ── Path B: no data — discover what tools are needed ──
-        logger.info("Custom Agent: Path B — running discovery mode (no input_data provided)")
+        # ── Path B: no data — discover what tools are needed (or fetch if execution_mode) ──
+        is_fetch_mode = request.execution_mode == "fetch_data"
+        logger.info(
+            "Custom Agent: Path B — %s (no input_data provided)",
+            "fetch mode (execution_mode=fetch_data)" if is_fetch_mode else "running discovery mode",
+        )
         available_tools = list(TOOLS_DESCRIPTION.keys())
         logger.info("Custom Agent: Path B available_tools=%s", available_tools)
 
@@ -212,8 +216,24 @@ async def run_custom_agent(request: CustomAgentRequest):
             system_prompt=request.system_prompt,
             max_iterations=3,
             available_tools=available_tools,
-            discovery_only=True,
+            discovery_only=not is_fetch_mode,
+            allow_agent_creation=not is_fetch_mode,
         )
+
+        # ── Fetch mode: return tool results directly ──
+        if is_fetch_mode and loop_result.get("status") == "success":
+            final = loop_result.get("final_result", {})
+            analysis_text = json.dumps(final, indent=2, default=str) if isinstance(final, dict) else str(final)
+            logger.info(
+                "=== CUSTOM AGENT COMPLETE (fetch mode) === analysis_text_len=%d",
+                len(analysis_text),
+            )
+            return AnalysisResponse(
+                status="success",
+                analysis=analysis_text,
+                model=LLM_MODEL,
+                agent_name="custom",
+            )
 
         loop_status = loop_result.get("status", "error")
         tools_discovered = loop_result.get("tools_discovered", [])
