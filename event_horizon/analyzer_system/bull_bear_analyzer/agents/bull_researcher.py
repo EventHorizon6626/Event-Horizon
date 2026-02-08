@@ -19,6 +19,7 @@ try:
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
+    track = lambda **kw: lambda fn: fn  # no-op decorator
 
 try:
     from openai import OpenAI
@@ -54,17 +55,20 @@ class BullResearcher:
         self.config = config or {}
         self.logger = logging.getLogger("analyzer.bull_bear.bull")
 
-        self.llm_model = self.config.get("llm_model", "gpt-4o-mini")
+        self.llm_model = self.config.get("llm_model", os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"))
         self.temperature = self.config.get("temperature", 0.7)  # Higher for creative arguments
         self.enable_opik = self.config.get("enable_opik", True) and OPIK_AVAILABLE
 
-        # Initialize OpenAI
+        # Initialize LLM client (OpenAI-compatible, pointed at local vLLM)
         if OPENAI_AVAILABLE:
-            self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            self.llm_client = OpenAI(
+                base_url=os.getenv("LLM_BASE_URL", "http://localhost:8000") + "/v1",
+                api_key=os.getenv("LLM_API_KEY") or "not-needed",
+            )
             if self.enable_opik:
-                self.openai_client = track_openai(self.openai_client)
+                self.llm_client = track_openai(self.llm_client)
         else:
-            self.openai_client = None
+            self.llm_client = None
 
         self.logger.info(f"Bull Researcher initialized: model={self.llm_model}, opik={self.enable_opik}")
 
@@ -94,8 +98,8 @@ class BullResearcher:
 
         argument = BullArgument(symbol=symbol)
 
-        if not self.openai_client:
-            argument.thesis = "OpenAI client not available"
+        if not self.llm_client:
+            argument.thesis = "LLM client not available"
             return argument
 
         try:
@@ -178,14 +182,13 @@ Return JSON:
 
 Be BULLISH! This is your role in the debate."""
 
-        response = self.openai_client.chat.completions.create(
+        response = self.llm_client.chat.completions.create(
             model=self.llm_model,
             messages=[
                 {"role": "system", "content": "You are an optimistic bull researcher who argues for buying stocks."},
                 {"role": "user", "content": prompt},
             ],
             temperature=self.temperature,
-            response_format={"type": "json_object"},
         )
 
         return {

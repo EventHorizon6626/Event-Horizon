@@ -14,6 +14,7 @@ try:
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
+    track = lambda **kw: lambda fn: fn  # no-op decorator
 
 from event_horizon.data_pipeline.stage_2.models.schemas import Stage2Output
 from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output

@@ -91,7 +91,7 @@ class Stage3Output:
     Complete Stage 3 output for a portfolio
 
     Contains LLM-extracted features for all symbols,
-    ready for analyzer system (decision-making teams).
+    ready for analyzer system (decision-making analyzers).
     """
 
     portfolio_id: str

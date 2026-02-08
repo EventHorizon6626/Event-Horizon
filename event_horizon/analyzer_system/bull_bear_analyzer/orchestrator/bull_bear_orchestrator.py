@@ -18,6 +18,7 @@ try:
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
+    track = lambda **kw: lambda fn: fn  # no-op decorator
 
 from event_horizon.analyzer_system.bull_bear_analyzer.agents import (
     BearResearcher,

@@ -1,14 +1,15 @@
 """Named agent endpoints — data agents, bull-bear, custom, prompt gen, think."""
 
 import logging
+import os
 
 from fastapi import APIRouter, HTTPException
 
 from models import (
     AgentRequest,
+    AnalyzerRequest,
     CustomAgentRequest,
     GenerateSystemPromptRequest,
-    System2Request,
     ThinkingAgentRequest,
 )
 from services.data_agents import STAGE1_CONFIG, execute_tool
@@ -88,7 +89,7 @@ async def run_fundamentals_agent(request: AgentRequest):
 # ── Bull-Bear Analyzer ──
 
 @router.post("/bull-bear-analyzer")
-async def run_bull_bear_analyzer(request: System2Request):
+async def run_bull_bear_analyzer(request: AnalyzerRequest):
     """Run the Bull-Bear coupled analyzer that performs internal debate."""
     try:
         import asyncio
@@ -97,7 +98,7 @@ async def run_bull_bear_analyzer(request: System2Request):
         from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
 
         analyzer = BullBearAnalyzer(
-            config={"llm_model": "gpt-4o-mini", "temperature": 0.7, "enable_opik": False}
+            config={"llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"), "temperature": 0.7, "enable_opik": False}
         )
         stage3_data = Stage3Output(
             portfolio_id=f"portfolio_{'-'.join(request.stocks)}",

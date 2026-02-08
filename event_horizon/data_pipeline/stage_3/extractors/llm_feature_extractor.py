@@ -18,6 +18,7 @@ try:
     OPIK_AVAILABLE = True
 except ImportError:
     OPIK_AVAILABLE = False
+    track = lambda **kw: lambda fn: fn  # no-op decorator
     logging.warning("Opik not available. Install with: pip install opik")
 
 try:
@@ -56,7 +57,7 @@ class LLMFeatureExtractor:
 
         Args:
             config: Configuration with:
-                - llm_model: Model to use (default: gpt-4o-mini)
+                - llm_model: Model to use (default: from LLM_MODEL env)
                 - temperature: LLM temperature (default: 0.3)
                 - opik_project: Opik project name (default: event-horizon)
                 - enable_opik: Enable Opik tracking (default: True)
@@ -64,22 +65,25 @@ class LLMFeatureExtractor:
         self.config = config or {}
         self.logger = logging.getLogger("data_pipeline.stage_3.extractor")
 
-        self.llm_model = self.config.get("llm_model", "gpt-4o-mini")
+        self.llm_model = self.config.get("llm_model", os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"))
         self.temperature = self.config.get("temperature", 0.3)
         self.opik_project = self.config.get("opik_project", "event-horizon")
         self.enable_opik = self.config.get("enable_opik", True) and OPIK_AVAILABLE
 
-        # Initialize OpenAI client
+        # Initialize LLM client (OpenAI-compatible, pointed at local vLLM)
         if OPENAI_AVAILABLE:
-            self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            self.llm_client = OpenAI(
+                base_url=os.getenv("LLM_BASE_URL", "http://localhost:8000") + "/v1",
+                api_key=os.getenv("LLM_API_KEY") or "not-needed",
+            )
 
-            # Track OpenAI with Opik
+            # Track with Opik
             if self.enable_opik:
-                self.openai_client = track_openai(self.openai_client)
-                self.logger.info("✓ Opik tracking enabled for OpenAI")
+                self.llm_client = track_openai(self.llm_client)
+                self.logger.info("✓ Opik tracking enabled for LLM client")
         else:
-            self.openai_client = None
-            self.logger.warning("OpenAI client not available")
+            self.llm_client = None
+            self.logger.warning("LLM client not available")
 
         # Initialize Opik
         if self.enable_opik:
@@ -124,9 +128,9 @@ class LLMFeatureExtractor:
             llm_model_used=self.llm_model,
         )
 
-        if not self.openai_client:
+        if not self.llm_client:
             features.has_errors = True
-            features.errors.append("OpenAI client not available")
+            features.errors.append("LLM client not available")
             return features
 
         try:
@@ -247,14 +251,13 @@ Please provide your analysis in the following JSON format:
 
 Return ONLY the JSON, no additional text."""
 
-        response = self.openai_client.chat.completions.create(
+        response = self.llm_client.chat.completions.create(
             model=self.llm_model,
             messages=[
                 {"role": "system", "content": "You are a financial analysis expert."},
                 {"role": "user", "content": prompt},
             ],
             temperature=self.temperature,
-            response_format={"type": "json_object"},
         )
 
         # Extract response
