@@ -1,10 +1,10 @@
-"""Team 2 Models"""
+"""Bull-Bear Analyzer Models"""
 
-from event_horizon.analyzer_system.team_2_researchers.models.schemas import (
+from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import (
     BearArgument,
     BullArgument,
+    BullBearAnalysisOutput,
     InvestmentThesis,
-    Team2Output,
 )
 
-__all__ = ["BullArgument", "BearArgument", "InvestmentThesis", "Team2Output"]
+__all__ = ["BullArgument", "BearArgument", "InvestmentThesis", "BullBearAnalysisOutput"]

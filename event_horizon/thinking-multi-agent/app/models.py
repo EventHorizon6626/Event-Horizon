@@ -123,8 +123,8 @@ class AgentRequest(BaseModel):
     indicators: Optional[List[str]] = None
 
 
-class System2Request(BaseModel):
-    """Request model for System 2 agents (bull-bear, risk-manager, etc.)."""
+class AnalyzerRequest(BaseModel):
+    """Request model for analyzer agents (bull-bear, risk-manager, etc.)."""
     stocks: List[str]
     data: Optional[dict] = None
 

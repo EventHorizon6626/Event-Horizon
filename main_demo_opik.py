@@ -5,7 +5,7 @@ Full pipeline demonstration:
 - Stage 1: Data Retrieval
 - Stage 2: Normalization
 - Stage 3: LLM Feature Extraction (Opik tracked)
-- Team 2: Bull/Bear Debate (Opik tracked)
+- Analyzer: Bull/Bear Debate (Opik tracked)
 
 🎯 HACKATHON DEMO:
 This showcases how Opik enables rapid development of complex multi-agent systems!
@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 from event_horizon.data_pipeline import Stage1Orchestrator
 from event_horizon.data_pipeline.stage_2 import Stage2Orchestrator
 from event_horizon.data_pipeline.stage_3 import Stage3Orchestrator
-from event_horizon.analyzer_system.team_2_researchers import Team2Orchestrator
+from event_horizon.analyzer_system import BullBearAnalyzer
 
 
 def setup_logging():
@@ -92,7 +92,7 @@ def print_debate_result(symbol: str, bull_arg, bear_arg, thesis):
 def save_results(data: dict, filename: str):
     """Save results to JSON"""
     # Convert dataclass objects to dicts
-    for key in ["stage1_output", "stage2_output", "stage3_output", "team2_output"]:
+    for key in ["stage1_output", "stage2_output", "stage3_output", "analyzer_output"]:
         if key in data and hasattr(data[key], "to_dict"):
             data[key] = data[key].to_dict()
 
@@ -109,11 +109,10 @@ def main():
 
     print_section("EVENT HORIZON x OPIK - HACKATHON DEMO", "=", "🚀")
 
-    # Check API keys
-    if not os.getenv("OPENAI_API_KEY"):
-        print("❌ ERROR: OPENAI_API_KEY required for this demo")
-        print("   Add to .env file and restart\n")
-        sys.exit(1)
+    # Check LLM endpoint
+    llm_base = os.getenv("LLM_BASE_URL", "http://localhost:8000")
+    print(f"🔗 LLM endpoint: {llm_base}")
+    print(f"   Model: {os.getenv('LLM_MODEL', 'mistralai/Ministral-3-14B-Reasoning-2512')}\n")
 
     # Demo portfolio
     portfolio = {
@@ -164,7 +163,7 @@ def main():
     print("   Extracting features with LLM...\n")
 
     stage3_config = {
-        "llm_model": "gpt-4o-mini",
+        "llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"),
         "temperature": 0.3,
         "opik_project": "event-horizon",
         "enable_opik": True,
@@ -179,34 +178,34 @@ def main():
     print(f"   Tokens: {result3['total_tokens_used']}")
 
     # ========================================================================
-    # TEAM 2: BULL/BEAR DEBATE (OPIK!)
+    # ANALYZER: BULL/BEAR DEBATE (OPIK!)
     # ========================================================================
-    print_section("TEAM 2: BULL vs BEAR DEBATE", "=", "🎭")
+    print_section("ANALYZER: BULL vs BEAR DEBATE", "=", "🎭")
 
     print("🎯 Opik tracking multi-agent debate!")
     print("   Bull Researcher vs Bear Researcher → Research Manager\n")
 
-    team2_config = {
-        "llm_model": "gpt-4o-mini",
+    analyzer_config = {
+        "llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"),
         "temperature": 0.7,  # Higher for creative arguments
         "opik_project": "event-horizon",
         "enable_opik": True,
     }
 
-    orchestrator_team2 = Team2Orchestrator(config=team2_config)
-    result_team2 = orchestrator_team2.execute(stage3_output)
-    team2_output = result_team2["team2_output"]
+    analyzer = BullBearAnalyzer(config=analyzer_config)
+    analyzer_result = analyzer.execute(stage3_output)
+    analyzer_output = analyzer_result["bull_bear_output"]
 
-    print(f"✅ Team 2 Debates: {result_team2['status'].upper()} ({result_team2['execution_time_seconds']:.1f}s)")
-    print(f"   Debates Conducted: {result_team2['total_debates']}")
-    print(f"   Tokens Used: {result_team2['total_tokens_used']}")
+    print(f"✅ Analyzer Debates: {analyzer_result['status'].upper()} ({analyzer_result['execution_time_seconds']:.1f}s)")
+    print(f"   Debates Conducted: {analyzer_result['total_debates']}")
+    print(f"   Tokens Used: {analyzer_result['total_tokens_used']}")
 
     # Show debate results
-    for symbol in team2_output.symbols:
-        if symbol in team2_output.investment_theses:
-            bull_arg = team2_output.bull_arguments[symbol]
-            bear_arg = team2_output.bear_arguments[symbol]
-            thesis = team2_output.investment_theses[symbol]
+    for symbol in analyzer_output.symbols:
+        if symbol in analyzer_output.investment_theses:
+            bull_arg = analyzer_output.bull_arguments[symbol]
+            bear_arg = analyzer_output.bear_arguments[symbol]
+            thesis = analyzer_output.investment_theses[symbol]
             print_debate_result(symbol, bull_arg, bear_arg, thesis)
 
     # ========================================================================
@@ -214,15 +213,15 @@ def main():
     # ========================================================================
     print_section("OPIK INSIGHTS", "=", "📊")
 
-    total_llm_calls = result3['total_llm_calls'] + (result_team2['total_debates'] * 3)
-    total_tokens = result3['total_tokens_used'] + result_team2['total_tokens_used']
+    total_llm_calls = result3['total_llm_calls'] + (analyzer_result['total_debates'] * 3)
+    total_tokens = result3['total_tokens_used'] + analyzer_result['total_tokens_used']
 
     print("🎯 Opik Tracked Entire Pipeline:")
     print(f"   Total LLM Calls: {total_llm_calls}")
     print(f"      - Stage 3 (Feature Extraction): {result3['total_llm_calls']}")
-    print(f"      - Team 2 (Bull/Bear/Manager): {result_team2['total_debates'] * 3}")
+    print(f"      - Analyzer (Bull/Bear/Manager): {analyzer_result['total_debates'] * 3}")
     print(f"   Total Tokens: {total_tokens:,}")
-    print(f"   Project: {team2_config['opik_project']}")
+    print(f"   Project: {analyzer_config['opik_project']}")
 
     print(f"\n🎯 What Opik Enables:")
     print(f"   ✅ Full visibility into multi-agent debates")
@@ -234,7 +233,7 @@ def main():
 
     print(f"\n📈 View Complete Traces:")
     print(f"   Dashboard: https://www.comet.com/opik")
-    print(f"   Project: {team2_config['opik_project']}")
+    print(f"   Project: {analyzer_config['opik_project']}")
 
     # ========================================================================
     # SAVE RESULTS
@@ -250,11 +249,11 @@ def main():
         "stage1": result1,
         "stage2": result2,
         "stage3": result3,
-        "team2": result_team2,
+        "analyzer": analyzer_result,
         "opik_metrics": {
             "total_llm_calls": total_llm_calls,
             "total_tokens": total_tokens,
-            "project": team2_config['opik_project'],
+            "project": analyzer_config['opik_project'],
         }
     }
 
@@ -271,7 +270,7 @@ def main():
         result1["execution_time_seconds"]
         + result2["execution_time_seconds"]
         + result3["execution_time_seconds"]
-        + result_team2["execution_time_seconds"]
+        + analyzer_result["execution_time_seconds"]
     )
 
     print(f"✅ Full pipeline executed successfully!")
@@ -281,7 +280,7 @@ def main():
     print(f"\n🎯 Hackathon Demo Summary:")
     print(f"   1. Built complete multi-agent trading system")
     print(f"   2. Stage 3: LLM feature extraction (Opik tracked)")
-    print(f"   3. Team 2: Bull/Bear debates (Opik tracked)")
+    print(f"   3. Analyzer: Bull/Bear debates (Opik tracked)")
     print(f"   4. {total_llm_calls} LLM calls fully traced")
     print(f"   5. {total_tokens:,} tokens automatically tracked")
 
@@ -297,7 +296,7 @@ def main():
     print(f"   2. Compare bull vs bear argument quality")
     print(f"   3. Evaluate manager decisions against market outcomes")
     print(f"   4. Experiment with different prompts")
-    print(f"   5. Build remaining teams (1, 3, 4) with same Opik setup")
+    print(f"   5. Build remaining analyzers with same Opik setup")
 
 
 if __name__ == "__main__":
