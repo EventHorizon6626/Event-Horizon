@@ -19,7 +19,7 @@ TOOLS_DESCRIPTION = {
     "web_search": "Web search for general information: company history, background, industry context, non-market data",
 }
 
-THINK_PROMPT = """You are an intelligent financial analysis agent with access to data tools.
+THINK_PROMPT_BASE = """You are an intelligent financial analysis agent with access to data tools.
 
 Your task: {system_prompt}
 
@@ -34,11 +34,15 @@ Decide your next action. You must respond in JSON only (no markdown, no explanat
 
 Option 1 - Need data from existing tool:
 {{"action": "call_tool", "tool": "tool_name", "reasoning": "why I need this data"}}
+"""
 
+THINK_PROMPT_CREATE_AGENT = """
 Option 2 - Need specialized data that existing tools don't provide:
 {{"action": "create_data_agent", "agent_name": "Name for the agent", "agent_description": "Describe what data this agent should fetch", "data_type": "what kind of data (e.g., options chain, insider trading, SEC filings)", "reasoning": "why existing tools don't have this data"}}
+"""
 
-Option 3 - Ready to answer (have sufficient data):
+THINK_PROMPT_TAIL = """
+Option {final_option_num} - Ready to answer (have sufficient data):
 {{"action": "generate_response", "reasoning": "I have sufficient data because..."}}
 
 Think step by step. What data do you need to complete the analysis?"""
@@ -54,7 +58,8 @@ def _clean_json(text: str) -> str:
 
 
 async def think_step(
-    system_prompt: str, context: dict, available_tools: List[str]
+    system_prompt: str, context: dict, available_tools: List[str],
+    allow_agent_creation: bool = True,
 ) -> dict:
     """One iteration: ask LLM what action to take next."""
     stocks = context.get("stocks", [])
@@ -64,12 +69,19 @@ async def think_step(
         f"- {t}: {TOOLS_DESCRIPTION.get(t, 'Custom data tool')}" for t in available_tools
     )
     data_summary = summarize_data(collected_data)
-    prompt = THINK_PROMPT.format(
+
+    # Build prompt: include create_data_agent option only when allowed
+    prompt = THINK_PROMPT_BASE.format(
         system_prompt=system_prompt,
         tools_description=tools_desc,
         stocks=stocks,
         collected_data_summary=data_summary,
     )
+    if allow_agent_creation:
+        prompt += THINK_PROMPT_CREATE_AGENT
+        prompt += THINK_PROMPT_TAIL.format(final_option_num=3)
+    else:
+        prompt += THINK_PROMPT_TAIL.format(final_option_num=2)
     logger.info(
         "think_step: prompt_len=%d, stocks=%s, collected_data_keys=%s, available_tools=%s",
         len(prompt), stocks, list(collected_data.keys()), available_tools,
@@ -197,11 +209,16 @@ async def run_thinking_loop(
     max_iterations: int = 5,
     available_tools: List[str] = None,
     discovery_only: bool = False,
+    allow_agent_creation: bool = True,
 ) -> dict:
     """Execute the full ReAct thinking loop.
 
     When discovery_only=True, tools are not executed — the loop only discovers
     which tools the LLM wants. Returns tools_discovered list instead of results.
+
+    When allow_agent_creation=False, the LLM prompt omits the create_data_agent
+    option, forcing it to use available tools (e.g. web_search) or generate a
+    response directly. Used for exotic agent fetch mode.
     """
     if available_tools is None:
         available_tools = ["candlestick", "earnings", "news", "technical", "fundamentals"]
@@ -226,7 +243,7 @@ async def run_thinking_loop(
         logger.info("=== ITERATION %d/%d ===", iteration, max_iterations)
         logger.info("Iteration %d: context data_keys=%s, tools_used_so_far=%s", iteration, list(context["data"].keys()), tools_used)
 
-        thought = await think_step(system_prompt, context, available_tools)
+        thought = await think_step(system_prompt, context, available_tools, allow_agent_creation=allow_agent_creation)
         action = thought.get("action", "generate_response")
         reasoning = thought.get("reasoning", "")
         logger.info("Iteration %d: action=%s, tool=%s, reasoning=%s", iteration, action, thought.get("tool"), reasoning)
