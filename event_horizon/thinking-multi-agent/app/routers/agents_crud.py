@@ -1,5 +1,7 @@
 """Agent CRUD + unified analyze dispatch."""
 
+import asyncio
+import json
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -7,7 +9,12 @@ from fastapi import APIRouter, HTTPException
 from agents import store
 from models import AgentResponse, AnalysisRequest, AnalysisResponse, CreateAgentRequest
 from prompts import build_user_prompt
+from services.data_agents import execute_tool
 from services.llm import LLM_MODEL, call_llm_full
+
+from event_horizon.data_pipeline.stage_1.models.schemas import Stage1Output
+from event_horizon.data_pipeline.stage_2.orchestrator.stage_2_orchestrator import Stage2Orchestrator
+from event_horizon.data_pipeline.stage_3.orchestrator.stage_3_orchestrator import Stage3Orchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -62,36 +69,82 @@ async def analyze_with_agent(agent_id: str, request: AnalysisRequest):
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
 
-    # Data agents don't run LLM — return a data_source spec
+    # Data agents — fetch data and run full Stage 1→2→3 pipeline
     if agent.get("type") == "data":
         stocks = request.stocks or []
         agent_name = agent["name"].lower()
         agent_source = agent.get("source", "custom")
 
-        builtin_specs = {
-            "candlestick": {"output_key": "chart_data_by_symbol", "provides": "OHLCV price data"},
-            "earnings": {"output_key": "earnings_data_by_symbol", "provides": "quarterly earnings and financials"},
-            "news": {"output_key": "news_data_by_symbol", "provides": "recent news articles"},
-            "technical": {"output_key": "technical_data_by_symbol", "provides": "technical indicators (RSI, MACD, SMA)"},
-            "fundamentals": {"output_key": "fundamentals_data_by_symbol", "provides": "fundamental metrics (P/E, ROE, debt)"},
+        builtin_names = {"candlestick", "earnings", "news", "technical", "fundamentals"}
+
+        # Map built-in agent names to Stage1Output field names
+        AGENT_TO_STAGE1_FIELD = {
+            "candlestick": "chart_data",
+            "earnings": "earnings_data",
+            "news": "news_data",
+            "technical": "technical_data",
+            "fundamentals": "fundamentals_data",
+        }
+        # Map agent names to the key in the result dict that holds per-symbol data
+        AGENT_TO_RESULT_KEY = {
+            "candlestick": "chart_data_by_symbol",
+            "earnings": "earnings_data_by_symbol",
+            "news": "news_data_by_symbol",
+            "technical": "technical_data_by_symbol",
+            "fundamentals": "fundamentals_data_by_symbol",
         }
 
-        if agent_source == "built-in" and agent_name in builtin_specs:
-            spec = builtin_specs[agent_name]
-            data_source_spec = {
-                "agent": agent_name, "source": "built-in", "pipeline": "stage_1",
-                "output_key": spec["output_key"], "provides": spec["provides"], "symbols": stocks,
-            }
+        portfolio_id = f"portfolio_{'-'.join(stocks)}"
+        stage1 = Stage1Output(portfolio_id=portfolio_id, symbols=stocks)
+
+        if agent_source == "built-in" and agent_name in builtin_names:
+            result = await execute_tool(agent_name, stocks)
+            if "error" in result:
+                return AnalysisResponse(
+                    status="error", agent_id=agent_id, agent_name=agent["name"],
+                    analysis=json.dumps(result, default=str), reasoning=None,
+                    model=LLM_MODEL, provider="eh-multi-agent",
+                )
+            result_key = AGENT_TO_RESULT_KEY[agent_name]
+            stage1_field = AGENT_TO_STAGE1_FIELD[agent_name]
+            if result_key in result:
+                setattr(stage1, stage1_field, result[result_key])
+
+        elif agent_source == "web_search":
+            from services.web_search import search_for_stocks
+
+            topic = agent.get("description", "") or agent.get("system_prompt", "general")
+            result = await search_for_stocks(stocks, topic)
+            if result.get("web_search_data_by_symbol"):
+                stage1.web_search_data = result["web_search_data_by_symbol"]
+
         else:
+            # Custom data agent — return spec (no built-in executor)
             data_source_spec = {
                 "agent": agent_name, "source": "custom",
                 "description": agent.get("description", ""), "symbols": stocks,
             }
+            return AnalysisResponse(
+                status="data_source", agent_id=agent_id, agent_name=agent["name"],
+                analysis=None, reasoning=None, model=LLM_MODEL,
+                provider="eh-multi-agent", data_source=data_source_spec,
+            )
+
+        # Stage 2: Normalize
+        s2 = Stage2Orchestrator()
+        s2_result = await asyncio.to_thread(s2.execute, stage1)
+
+        # Stage 3: LLM feature extraction
+        s3 = Stage3Orchestrator(config={"enable_opik": False})
+        s3_result = await asyncio.to_thread(s3.execute, s2_result["stage2_output"])
+
+        stage3_output = s3_result["stage3_output"]
+        features_dict = {sym: f.to_dict() for sym, f in stage3_output.symbol_features.items()}
 
         return AnalysisResponse(
-            status="data_source", agent_id=agent_id, agent_name=agent["name"],
-            analysis=None, reasoning=None, model=LLM_MODEL,
-            provider="eh-multi-agent", data_source=data_source_spec,
+            status="success", agent_id=agent_id, agent_name=agent["name"],
+            analysis=json.dumps(features_dict, default=str), reasoning=None,
+            model=LLM_MODEL, provider="eh-multi-agent",
         )
 
     # Analysis agents run LLM

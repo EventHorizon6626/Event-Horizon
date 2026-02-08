@@ -26,7 +26,7 @@ from event_horizon.analyzer_system.bull_bear_analyzer.agents import (
     ResearchManager,
 )
 from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import BullBearAnalysisOutput
-from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
+from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output, SymbolFeatures
 
 
 class BullBearAnalyzer:
@@ -74,6 +74,68 @@ class BullBearAnalyzer:
 
         self.logger.info("Bull-Bear Analyzer initialized (Bull/Bear Debate)")
 
+    def _fetch_missing_features(self, stage3_output: Stage3Output) -> Stage3Output:
+        """Run Stage 1→2→3 pipeline for symbols missing features.
+
+        This allows the bull-bear analyzer to be called with just a list of
+        symbols — it will auto-fetch all required data through the pipeline.
+        """
+        missing = [s for s in stage3_output.symbols if s not in stage3_output.symbol_features]
+        if not missing:
+            return stage3_output
+
+        self.logger.info(f"Auto-fetching pipeline data for missing symbols: {missing}")
+
+        try:
+            from event_horizon.data_pipeline.stage_1.orchestrator.stage_1_orchestrator import Stage1Orchestrator
+            from event_horizon.data_pipeline.stage_2.orchestrator.stage_2_orchestrator import Stage2Orchestrator
+            from event_horizon.data_pipeline.stage_3.orchestrator.stage_3_orchestrator import Stage3Orchestrator
+
+            llm_model = self.config.get("llm_model", "mistralai/Ministral-3-14B-Reasoning-2512")
+
+            # Stage 1: data retrieval
+            s1 = Stage1Orchestrator(config={
+                "enabled_agents": ["candlestick", "earnings", "news", "technical", "fundamentals"],
+                "max_workers": 5,
+                "agent_configs": {},
+            })
+            s1_result = s1.execute({"portfolio": missing})
+            s1_output = s1_result.get("stage1_output")
+            if not s1_output:
+                self.logger.error("Stage 1 produced no output")
+                return stage3_output
+
+            # Stage 2: normalization
+            s2 = Stage2Orchestrator()
+            s2_result = s2.execute(s1_output)
+            s2_output = s2_result.get("stage2_output")
+            if not s2_output:
+                self.logger.error("Stage 2 produced no output")
+                return stage3_output
+
+            # Stage 3: LLM feature extraction
+            s3 = Stage3Orchestrator(config={
+                "enable_opik": False,
+                "llm_model": llm_model,
+                "temperature": 0.7,
+            })
+            s3_result = s3.execute(s2_output)
+            s3_output = s3_result.get("stage3_output")
+            if not s3_output:
+                self.logger.error("Stage 3 produced no output")
+                return stage3_output
+
+            # Merge fetched features into the original output
+            for sym, feat in s3_output.symbol_features.items():
+                stage3_output.symbol_features[sym] = feat
+
+            self.logger.info(f"Auto-fetch complete: got features for {list(s3_output.symbol_features.keys())}")
+
+        except Exception as e:
+            self.logger.error(f"Auto-fetch pipeline failed: {e}")
+
+        return stage3_output
+
     @track(name="bull_bear_debate_pipeline", project_name="event-horizon")
     def execute(self, stage3_output: Stage3Output) -> Dict[str, Any]:
         """
@@ -101,6 +163,9 @@ class BullBearAnalyzer:
 
         self.logger.info(f"Starting Bull-Bear debate for portfolio {stage3_output.portfolio_id}")
         self.logger.info(f"Symbols: {stage3_output.symbols}")
+
+        # Auto-fetch missing features via the full pipeline
+        stage3_output = self._fetch_missing_features(stage3_output)
 
         # Initialize output
         analysis_output = BullBearAnalysisOutput(

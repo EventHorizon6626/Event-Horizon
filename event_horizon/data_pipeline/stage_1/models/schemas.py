@@ -116,6 +116,19 @@ class FundamentalsData:
 
 
 @dataclass
+class WebSearchData:
+    """Output schema for Web Search Agent"""
+
+    symbol: str
+    answer: str = ""
+    results: List[Dict[str, Any]] = field(default_factory=list)
+    query: str = ""
+    data_source: str = "tavily"
+    retrieved_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    error: Optional[str] = None
+
+
+@dataclass
 class Stage1Output:
     """
     Complete Stage 1 output for a portfolio
@@ -136,6 +149,7 @@ class Stage1Output:
     sec_data: Dict[str, SECFilingsData] = field(default_factory=dict)
     technical_data: Dict[str, TechnicalData] = field(default_factory=dict)
     fundamentals_data: Dict[str, FundamentalsData] = field(default_factory=dict)
+    web_search_data: Dict[str, WebSearchData] = field(default_factory=dict)
 
     # Metadata
     execution_time_seconds: float = 0.0
@@ -157,6 +171,7 @@ class Stage1Output:
             "sec_data": {k: v.__dict__ for k, v in self.sec_data.items()},
             "technical_data": {k: v.__dict__ for k, v in self.technical_data.items()},
             "fundamentals_data": {k: v.__dict__ for k, v in self.fundamentals_data.items()},
+            "web_search_data": {k: v.__dict__ for k, v in self.web_search_data.items()},
             "execution_time_seconds": self.execution_time_seconds,
             "agents_executed": self.agents_executed,
             "timestamp": self.timestamp,

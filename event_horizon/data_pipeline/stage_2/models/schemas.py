@@ -65,6 +65,15 @@ class NormalizedSymbolData:
     #   "financials": {...}
     # }
 
+    # Web Search Data (normalized)
+    web_search: Dict[str, Any] = field(default_factory=dict)
+    # {
+    #   "answer": str,              # Synthesized answer
+    #   "articles": List[dict],     # [{title, content, url}]
+    #   "total_count": int,
+    #   "query": str
+    # }
+
     # Metadata
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     data_quality_score: float = 0.0  # 0-1, based on completeness
@@ -80,6 +89,7 @@ class NormalizedSymbolData:
             "fundamentals": self.fundamentals,
             "news": self.news,
             "earnings": self.earnings,
+            "web_search": self.web_search,
             "timestamp": self.timestamp,
             "data_quality_score": self.data_quality_score,
             "has_errors": self.has_errors,

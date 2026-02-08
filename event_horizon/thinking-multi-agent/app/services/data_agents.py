@@ -46,8 +46,13 @@ def _run_agent_sync(tool_name: str, stocks: List[str], **overrides) -> dict:
 
 
 async def execute_tool(tool_name: str, stocks: List[str], **overrides) -> dict:
-    """Execute a built-in data tool (async wrapper around sync agents)."""
+    """Execute a data tool (built-in Stage 1 agent or web search)."""
     try:
+        if tool_name == "web_search":
+            from services.web_search import search_for_stocks
+
+            topic = overrides.get("topic", "company history background")
+            return await search_for_stocks(stocks, topic)
         return await asyncio.to_thread(_run_agent_sync, tool_name, stocks, **overrides)
     except Exception as e:
         logger.error(f"Tool execution failed for {tool_name}: {e}")
@@ -64,6 +69,7 @@ def summarize_data(data: dict) -> str:
         "news": "news articles",
         "technical": "technical indicators",
         "fundamentals": "fundamental metrics",
+        "web_search": "web search results",
     }
     lines = [f"- {k}: {labels.get(k, 'custom data')} available" for k in data]
     return "\n".join(lines) if lines else "No data collected yet"

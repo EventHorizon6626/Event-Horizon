@@ -217,6 +217,25 @@ class LLMFeatureExtractor:
                             f"**Recent News ({len(articles)} articles)**:\n" + "\n".join(news_summaries)
                         )
 
+        # Web search
+        if normalized_data.web_search:
+            ws_info = normalized_data.web_search
+            if not ws_info.get("error"):
+                parts = []
+                if ws_info.get("answer"):
+                    parts.append(f"Summary: {ws_info['answer']}")
+                articles = ws_info.get("articles", [])
+                for article in articles[:5]:
+                    title = article.get("title", "")
+                    content = article.get("content", "")[:200]
+                    if title or content:
+                        parts.append(f"- {title}: {content}")
+                if parts:
+                    query = ws_info.get("query", "")
+                    context_parts.append(
+                        f"**Web Research ({query})**:\n" + "\n".join(parts)
+                    )
+
         return "\n\n".join(context_parts) if context_parts else "No data available"
 
     @track(name="llm_extraction_call")
