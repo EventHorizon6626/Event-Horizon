@@ -1,5 +1,6 @@
 """Unified LLM client — works with local vLLM or any OpenAI-compatible API."""
 
+import json
 import logging
 import os
 from typing import Any, AsyncGenerator, Dict, List, Optional
@@ -29,12 +30,17 @@ def _endpoint() -> str:
 
 
 async def call_llm(prompt: str, system_prompt: str = None) -> str:
-    """Simple prompt→text helper. Replaces call_gemini()."""
-    logger.debug("call_llm: prompt_len=%d, has_system_prompt=%s", len(prompt), system_prompt is not None)
+    """Simple prompt->text helper. Replaces call_gemini()."""
     messages: List[dict] = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
+
+    logger.info(
+        "call_llm: endpoint=%s, model=%s, prompt_len=%d, has_system_prompt=%s, messages=%d",
+        _endpoint(), LLM_MODEL, len(prompt), system_prompt is not None, len(messages),
+    )
+    logger.debug("call_llm: full prompt:\n%s", prompt)
 
     payload = {
         "model": LLM_MODEL,
@@ -50,14 +56,19 @@ async def call_llm(prompt: str, system_prompt: str = None) -> str:
             resp.raise_for_status()
             result = resp.json()
     except httpx.HTTPStatusError as e:
-        logger.error("call_llm HTTP error: status=%d", e.response.status_code)
+        logger.error("call_llm HTTP error: status=%d, response=%s", e.response.status_code, e.response.text[:1000])
         raise
     except Exception as e:
         logger.error("call_llm failed: %s", e)
         raise
 
     content = result["choices"][0]["message"].get("content", "")
-    logger.info("call_llm complete: model=%s, response_len=%d", LLM_MODEL, len(content))
+    usage = result.get("usage", {})
+    logger.info(
+        "call_llm complete: model=%s, response_len=%d, usage=%s",
+        LLM_MODEL, len(content), usage,
+    )
+    logger.info("call_llm response:\n%s", content)
     return content
 
 
@@ -67,7 +78,14 @@ async def call_llm_full(
     max_tokens: int = 4096,
 ) -> Dict[str, Any]:
     """Full chat completion with reasoning extraction. Replaces _run_analysis()."""
-    logger.debug("call_llm_full: messages=%d, temperature=%.2f, max_tokens=%d", len(messages), temperature, max_tokens)
+    logger.info(
+        "call_llm_full: endpoint=%s, model=%s, messages=%d, temperature=%.2f, max_tokens=%d",
+        _endpoint(), LLM_MODEL, len(messages), temperature, max_tokens,
+    )
+    for i, msg in enumerate(messages):
+        logger.info("call_llm_full: message[%d] role=%s, content_len=%d", i, msg.get("role"), len(msg.get("content", "")))
+        logger.debug("call_llm_full: message[%d] content:\n%s", i, msg.get("content", ""))
+
     payload = {
         "model": LLM_MODEL,
         "messages": messages,
@@ -82,7 +100,7 @@ async def call_llm_full(
             resp.raise_for_status()
             result = resp.json()
     except httpx.HTTPStatusError as e:
-        logger.error("call_llm_full HTTP error: status=%d", e.response.status_code)
+        logger.error("call_llm_full HTTP error: status=%d, response=%s", e.response.status_code, e.response.text[:1000])
         raise
     except Exception as e:
         logger.error("call_llm_full failed: %s", e)
@@ -92,11 +110,20 @@ async def call_llm_full(
     usage = result.get("usage")
     model = result.get("model", LLM_MODEL)
     has_reasoning = choice.get("reasoning_content") is not None
-    logger.info("call_llm_full complete: model=%s, has_reasoning=%s, usage=%s", model, has_reasoning, usage)
+    content = choice.get("content", "")
+    reasoning = choice.get("reasoning_content")
+
+    logger.info(
+        "call_llm_full complete: model=%s, has_reasoning=%s, content_len=%d, reasoning_len=%d, usage=%s",
+        model, has_reasoning, len(content), len(reasoning) if reasoning else 0, usage,
+    )
+    logger.info("call_llm_full response content:\n%s", content)
+    if reasoning:
+        logger.info("call_llm_full reasoning:\n%s", reasoning)
 
     return {
-        "reasoning": choice.get("reasoning_content"),
-        "content": choice.get("content", ""),
+        "reasoning": reasoning,
+        "content": content,
         "usage": usage,
         "model": model,
     }
@@ -108,7 +135,7 @@ async def stream_llm(
     max_tokens: int = 4096,
 ) -> AsyncGenerator[str, None]:
     """Stream SSE lines from the LLM backend."""
-    logger.debug("stream_llm: starting, messages=%d, temperature=%.2f", len(messages), temperature)
+    logger.info("stream_llm: starting, messages=%d, temperature=%.2f, model=%s", len(messages), temperature, LLM_MODEL)
     payload = {
         "model": LLM_MODEL,
         "messages": messages,
