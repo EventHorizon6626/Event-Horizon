@@ -18,7 +18,6 @@ from services.data_agents import STAGE1_CONFIG, execute_tool
 from services.llm import LLM_MODEL, call_llm, call_llm_full
 from services.thinking_engine import (
     TOOLS_DESCRIPTION,
-    generate_data_agent_prompt,
     run_thinking_loop,
     think_step,
 )

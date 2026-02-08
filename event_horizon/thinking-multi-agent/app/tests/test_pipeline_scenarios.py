@@ -287,13 +287,18 @@ class TestThinkingAgent:
         self, client, mock_call_llm, mock_execute_tool
     ):
         """POST /agents/think: LLM requests a custom data agent -> status=paused."""
-        mock_call_llm.return_value = json.dumps({
-            "action": "create_data_agent",
-            "agent_name": "insider-trading",
-            "agent_description": "Fetch insider trading data from SEC filings",
-            "data_type": "insider trading",
-            "reasoning": "Need insider trading data not available in existing tools",
-        })
+        mock_call_llm.side_effect = [
+            # think_step: create_data_agent
+            json.dumps({
+                "action": "create_data_agent",
+                "agent_name": "insider-trading",
+                "agent_description": "Fetch insider trading data from SEC filings",
+                "data_type": "insider trading",
+                "reasoning": "Need insider trading data not available in existing tools",
+            }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized insider trading data retrieval agent. Your role is to search for and extract insider trading transaction data from SEC EDGAR filings, including Form 4 and Form 144 filings. Search for recent insider purchases, sales, and option exercises for the target stocks. Extract transaction dates, amounts, prices, and insider roles. Return structured JSON with transaction details and source URLs.",
+        ]
 
         resp = client.post(
             "/agents/think",
@@ -380,6 +385,8 @@ class TestCreateDataAgentFlow:
                 "data_type": "SEC filings",
                 "reasoning": "Need SEC filing data not available in standard tools",
             }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized SEC filings data retrieval agent. Your role is to search for and extract SEC filing data including 10-K annual reports and 10-Q quarterly reports for the target stocks. Search SEC EDGAR for the latest filings, extract key financial metrics, risk factors, and management discussion sections. Return structured JSON with filing dates, types, key excerpts, and source URLs.",
         ]
 
         resp = client.post(
@@ -418,13 +425,18 @@ class TestCreateDataAgentFlow:
 
         Expected: needs_data with 0 standard + 1 exotic required_agents.
         """
-        mock_call_llm.return_value = json.dumps({
-            "action": "create_data_agent",
-            "agent_name": "options-chain",
-            "agent_description": "Fetch options chain data with greeks",
-            "data_type": "options chain",
-            "reasoning": "Standard tools don't provide options data",
-        })
+        mock_call_llm.side_effect = [
+            # think_step: create_data_agent
+            json.dumps({
+                "action": "create_data_agent",
+                "agent_name": "options-chain",
+                "agent_description": "Fetch options chain data with greeks",
+                "data_type": "options chain",
+                "reasoning": "Standard tools don't provide options data",
+            }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized options chain data retrieval agent. Your role is to search for and extract options chain data including strike prices, expiration dates, open interest, volume, and greeks (delta, gamma, theta, vega) for the target stocks. Search for current options chain data from financial data providers. Return structured JSON with options data organized by expiration date and strike price.",
+        ]
 
         resp = client.post(
             "/agents/custom",
@@ -465,6 +477,8 @@ class TestCreateDataAgentFlow:
                 "data_type": "insider trading",
                 "reasoning": "Need insider transaction data",
             }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized insider trading data retrieval agent. Your role is to search for and extract insider trading transaction data from SEC EDGAR, including Form 4 filings. Search for recent insider purchases, sales, and option exercises. Extract transaction dates, amounts, prices, and insider roles. Return structured JSON with transaction details and source URLs.",
         ]
 
         resp = client.post(
@@ -694,13 +708,18 @@ class TestNeedsDataCreateAndExecute:
         [4] POST /agents/custom (input_data=SymbolFeatures) → final analysis
         """
         # ── Step 1: Discovery → exotic agent needed ──
-        mock_call_llm.return_value = json.dumps({
-            "action": "create_data_agent",
-            "agent_name": "sec-filings",
-            "agent_description": "Fetch SEC 10-K filings for AAPL",
-            "data_type": "SEC filings",
-            "reasoning": "Standard tools don't provide SEC filing data",
-        })
+        mock_call_llm.side_effect = [
+            # think_step: create_data_agent
+            json.dumps({
+                "action": "create_data_agent",
+                "agent_name": "sec-filings",
+                "agent_description": "Fetch SEC 10-K filings for AAPL",
+                "data_type": "SEC filings",
+                "reasoning": "Standard tools don't provide SEC filing data",
+            }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized SEC filings data retrieval agent. Your role is to search for and extract SEC filing data including 10-K annual reports for the target stocks. Search SEC EDGAR for the latest filings, extract risk factors and financial highlights. Return structured JSON with filing dates, types, key excerpts, and source URLs.",
+        ]
 
         step1 = client.post("/agents/custom", json={
             "stocks": ["AAPL"],
@@ -789,6 +808,8 @@ class TestNeedsDataCreateAndExecute:
                 "data_type": "insider trading",
                 "reasoning": "Need insider trade data not in standard tools",
             }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized insider trading data retrieval agent. Your role is to search for and extract insider trading transaction data from SEC EDGAR filings. Search for Form 4 filings, extract transaction dates, amounts, and insider roles. Return structured JSON with transaction details and source URLs.",
         ]
 
         step1 = client.post("/agents/custom", json={
@@ -965,6 +986,8 @@ class TestThinkingLoopToolFiltering:
                 "data_type": "SEC filings",
                 "reasoning": "All standard tools used, need SEC filing data",
             }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized SEC filings data retrieval agent. Your role is to search for and extract SEC filing data including 10-K annual reports and 10-Q quarterly reports. Search SEC EDGAR for the latest filings, extract key financial metrics, risk factors, and management discussion. Return structured JSON with filing dates, types, key excerpts, and source URLs.",
         ]
         mock_execute_tool.return_value = {"earnings_data": {"AAPL": {}}}
 
@@ -1162,6 +1185,8 @@ class TestCanvasNeedsDataFlow:
                 "data_type": "SEC filings",
                 "reasoning": "Standard tools don't provide SEC filing data",
             }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized SEC filings data retrieval agent. Your role is to search for and extract SEC filing data including 10-K and 10-Q filings. Search SEC EDGAR for the latest filings, extract key financial metrics and risk factors. Return structured JSON with filing dates, types, key excerpts, and source URLs.",
         ]
 
         step1 = client.post("/agents/custom", json={
@@ -1254,13 +1279,18 @@ class TestCanvasNeedsDataFlow:
         POST /agents/custom (input_data={collected})                            → success + analysis
         """
         # ── Step 1: Discovery → needs_data (exotic only) ──
-        mock_call_llm.return_value = json.dumps({
-            "action": "create_data_agent",
-            "agent_name": "options-chain",
-            "agent_description": "Fetch options chain data with greeks",
-            "data_type": "options chain",
-            "reasoning": "Standard tools don't provide options data",
-        })
+        mock_call_llm.side_effect = [
+            # think_step: create_data_agent
+            json.dumps({
+                "action": "create_data_agent",
+                "agent_name": "options-chain",
+                "agent_description": "Fetch options chain data with greeks",
+                "data_type": "options chain",
+                "reasoning": "Standard tools don't provide options data",
+            }),
+            # generate_data_agent_prompt meta-prompt LLM call
+            "You are a specialized options chain data retrieval agent. Your role is to search for and extract options chain data including strike prices, expiration dates, open interest, volume, and greeks for the target stocks. Search for current options data from financial providers. Return structured JSON with options data organized by expiration and strike.",
+        ]
 
         step1 = client.post("/agents/custom", json={
             "stocks": ["TSLA"],
@@ -1329,3 +1359,127 @@ class TestCanvasNeedsDataFlow:
         assert step3_body["analysis"] is not None
         assert step3_body.get("required_agents") is None  # Done — no more needs_data
         assert mock_call_llm_full.called  # Path A was taken
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Scenario 8: generate_data_agent_prompt — LLM meta-prompting + fallback
+# ──────────────────────────────────────────────────────────────────────
+
+
+class TestGenerateDataAgentPrompt:
+    """Verify the LLM meta-prompting for exotic data agent system prompts."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        """Common thought dict used by all tests."""
+        self.thought = {
+            "action": "create_data_agent",
+            "agent_name": "sec-filings",
+            "agent_description": "Fetch SEC 10-K and 10-Q filings",
+            "data_type": "SEC filings",
+            "reasoning": "Need SEC data not in standard tools",
+        }
+        self.stocks = ["AAPL", "MSFT"]
+        self.analyzer_task = "Deep analysis of AAPL and MSFT including SEC filings"
+
+    def test_meta_prompt_success(self, mock_call_llm):
+        """LLM returns a good prompt → it is used directly."""
+        import asyncio
+        from services.thinking_engine import generate_data_agent_prompt
+
+        llm_generated = (
+            "You are a specialized SEC filings data retrieval agent. "
+            "Your role is to search for and extract SEC filing data including "
+            "10-K annual reports and 10-Q quarterly reports for AAPL and MSFT. "
+            "Search SEC EDGAR for the latest filings. Extract key financial "
+            "metrics, risk factors, and management discussion sections. "
+            "Return structured JSON with filing dates, types, key excerpts, and source URLs."
+        )
+        mock_call_llm.return_value = llm_generated
+
+        result = asyncio.run(
+            generate_data_agent_prompt(self.thought, self.stocks, self.analyzer_task)
+        )
+
+        assert result == llm_generated
+        mock_call_llm.assert_called_once()
+        # Verify the meta-prompt sent to the LLM contains key context
+        meta_prompt_arg = mock_call_llm.call_args[0][0]
+        assert "sec-filings" in meta_prompt_arg
+        assert "SEC filings" in meta_prompt_arg
+        assert "AAPL, MSFT" in meta_prompt_arg
+        assert self.analyzer_task in meta_prompt_arg
+
+    def test_meta_prompt_failure_falls_back(self, mock_call_llm):
+        """LLM raises an exception → fallback template is used."""
+        import asyncio
+        from services.thinking_engine import generate_data_agent_prompt
+
+        mock_call_llm.side_effect = Exception("LLM service unavailable")
+
+        result = asyncio.run(
+            generate_data_agent_prompt(self.thought, self.stocks, self.analyzer_task)
+        )
+
+        # Should get a non-empty fallback prompt
+        assert len(result) > 100
+        assert "SEC filings" in result
+        assert "AAPL" in result
+        assert "MSFT" in result
+        assert "web_search" in result
+
+    def test_meta_prompt_empty_falls_back(self, mock_call_llm):
+        """LLM returns empty string → fallback template is used."""
+        import asyncio
+        from services.thinking_engine import generate_data_agent_prompt
+
+        mock_call_llm.return_value = ""
+
+        result = asyncio.run(
+            generate_data_agent_prompt(self.thought, self.stocks, self.analyzer_task)
+        )
+
+        # Should get a non-empty fallback prompt
+        assert len(result) > 100
+        assert "SEC filings" in result
+        assert "AAPL" in result
+
+    def test_meta_prompt_short_falls_back(self, mock_call_llm):
+        """LLM returns a response shorter than 100 chars → fallback template is used."""
+        import asyncio
+        from services.thinking_engine import generate_data_agent_prompt
+
+        mock_call_llm.return_value = "You are a data agent."  # too short
+
+        result = asyncio.run(
+            generate_data_agent_prompt(self.thought, self.stocks, self.analyzer_task)
+        )
+
+        # Should get the fallback, not the short LLM response
+        assert result != "You are a data agent."
+        assert len(result) > 100
+        assert "SEC filings" in result
+
+    def test_fallback_template_includes_context(self):
+        """Verify the fallback template includes stocks, data_type, analyzer task, and search strategy."""
+        from services.thinking_engine import _build_data_agent_prompt_template
+
+        result = _build_data_agent_prompt_template(
+            self.thought, self.stocks, self.analyzer_task
+        )
+
+        # Stock symbols
+        assert "AAPL" in result
+        assert "MSFT" in result
+        # Data type
+        assert "SEC filings" in result
+        # Agent name
+        assert "sec-filings" in result
+        # Analyzer task context
+        assert self.analyzer_task in result
+        # Search strategy guidance
+        assert "web_search" in result
+        assert "search" in result.lower()
+        # Output format
+        assert "JSON" in result
+        assert "status" in result

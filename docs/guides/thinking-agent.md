@@ -158,8 +158,8 @@ Executes a built-in data tool and returns results.
 #### `generate_final_response(system_prompt, context)`
 Generates the final analysis response using all collected data.
 
-#### `generate_data_agent_prompt(thought)`
-Creates a system prompt for a suggested custom data agent.
+#### `generate_data_agent_prompt(thought, stocks, analyzer_task)` *(async)*
+Generates a rich system prompt for a custom data agent via LLM meta-prompting. Falls back to an enhanced template if the LLM call fails.
 
 ### Iteration Flow
 
