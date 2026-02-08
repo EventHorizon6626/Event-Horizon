@@ -30,6 +30,7 @@ def _endpoint() -> str:
 
 async def call_llm(prompt: str, system_prompt: str = None) -> str:
     """Simple prompt→text helper. Replaces call_gemini()."""
+    logger.debug("call_llm: prompt_len=%d, has_system_prompt=%s", len(prompt), system_prompt is not None)
     messages: List[dict] = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -43,12 +44,21 @@ async def call_llm(prompt: str, system_prompt: str = None) -> str:
         "stream": False,
     }
 
-    async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
-        resp = await client.post(_endpoint(), json=payload, headers=_headers())
-        resp.raise_for_status()
-        result = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
+            resp = await client.post(_endpoint(), json=payload, headers=_headers())
+            resp.raise_for_status()
+            result = resp.json()
+    except httpx.HTTPStatusError as e:
+        logger.error("call_llm HTTP error: status=%d", e.response.status_code)
+        raise
+    except Exception as e:
+        logger.error("call_llm failed: %s", e)
+        raise
 
-    return result["choices"][0]["message"].get("content", "")
+    content = result["choices"][0]["message"].get("content", "")
+    logger.info("call_llm complete: model=%s, response_len=%d", LLM_MODEL, len(content))
+    return content
 
 
 async def call_llm_full(
@@ -57,6 +67,7 @@ async def call_llm_full(
     max_tokens: int = 4096,
 ) -> Dict[str, Any]:
     """Full chat completion with reasoning extraction. Replaces _run_analysis()."""
+    logger.debug("call_llm_full: messages=%d, temperature=%.2f, max_tokens=%d", len(messages), temperature, max_tokens)
     payload = {
         "model": LLM_MODEL,
         "messages": messages,
@@ -65,18 +76,29 @@ async def call_llm_full(
         "stream": False,
     }
 
-    async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
-        resp = await client.post(_endpoint(), json=payload, headers=_headers())
-        resp.raise_for_status()
-        result = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
+            resp = await client.post(_endpoint(), json=payload, headers=_headers())
+            resp.raise_for_status()
+            result = resp.json()
+    except httpx.HTTPStatusError as e:
+        logger.error("call_llm_full HTTP error: status=%d", e.response.status_code)
+        raise
+    except Exception as e:
+        logger.error("call_llm_full failed: %s", e)
+        raise
 
     choice = result["choices"][0]["message"]
+    usage = result.get("usage")
+    model = result.get("model", LLM_MODEL)
+    has_reasoning = choice.get("reasoning_content") is not None
+    logger.info("call_llm_full complete: model=%s, has_reasoning=%s, usage=%s", model, has_reasoning, usage)
 
     return {
         "reasoning": choice.get("reasoning_content"),
         "content": choice.get("content", ""),
-        "usage": result.get("usage"),
-        "model": result.get("model", LLM_MODEL),
+        "usage": usage,
+        "model": model,
     }
 
 
@@ -86,6 +108,7 @@ async def stream_llm(
     max_tokens: int = 4096,
 ) -> AsyncGenerator[str, None]:
     """Stream SSE lines from the LLM backend."""
+    logger.debug("stream_llm: starting, messages=%d, temperature=%.2f", len(messages), temperature)
     payload = {
         "model": LLM_MODEL,
         "messages": messages,
@@ -94,32 +117,48 @@ async def stream_llm(
         "stream": True,
     }
 
-    async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
-        async with client.stream(
-            "POST", _endpoint(), json=payload, headers=_headers()
-        ) as resp:
-            async for line in resp.aiter_lines():
-                if line.startswith("data: "):
-                    yield line + "\n\n"
+    try:
+        async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
+            async with client.stream(
+                "POST", _endpoint(), json=payload, headers=_headers()
+            ) as resp:
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: "):
+                        yield line + "\n\n"
+        logger.info("stream_llm complete")
+    except Exception as e:
+        logger.error("stream_llm failed: %s", e)
+        raise
 
 
 async def check_health() -> str:
     """Check LLM backend health. Returns status string."""
+    logger.debug("check_health: checking LLM backend at %s", LLM_BASE_URL)
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
                 f"{LLM_BASE_URL.rstrip('/')}/health", headers=_headers()
             )
-            return "healthy" if resp.status_code == 200 else f"unhealthy ({resp.status_code})"
+            status = "healthy" if resp.status_code == 200 else f"unhealthy ({resp.status_code})"
+            logger.info("check_health: %s", status)
+            return status
     except Exception as e:
+        logger.warning("check_health: unreachable: %s", e)
         return f"unreachable: {e}"
 
 
 async def list_models() -> dict:
     """List models available on the LLM backend."""
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(
-            f"{LLM_BASE_URL.rstrip('/')}/v1/models", headers=_headers()
-        )
-        resp.raise_for_status()
-        return resp.json()
+    logger.debug("list_models: fetching from %s", LLM_BASE_URL)
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{LLM_BASE_URL.rstrip('/')}/v1/models", headers=_headers()
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            logger.info("list_models: found %d models", len(data.get("data", [])))
+            return data
+    except Exception as e:
+        logger.error("list_models failed: %s", e)
+        raise

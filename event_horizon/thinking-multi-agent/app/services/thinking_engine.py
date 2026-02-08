@@ -69,10 +69,12 @@ async def think_step(
         stocks=stocks,
         collected_data_summary=summarize_data(collected_data),
     )
+    logger.debug("think_step: prompt_len=%d, stocks=%s", len(prompt), stocks)
 
     try:
         response = await call_llm(prompt)
         thought = json.loads(_clean_json(response))
+        logger.info("think_step: action=%s, tool=%s", thought.get("action"), thought.get("tool"))
         return thought
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse thinking JSON: {e}")
@@ -84,8 +86,10 @@ async def think_step(
 
 async def generate_final_response(system_prompt: str, context: dict) -> dict:
     """Generate final analysis from collected data."""
+    logger.info("Generating final response")
     stocks = context.get("stocks", [])
     collected_data = context.get("data", {})
+    logger.debug("generate_final_response: stocks=%s, data_keys=%s", stocks, list(collected_data.keys()))
 
     prompt = f"""Based on the following data, provide your analysis.
 
@@ -154,17 +158,19 @@ async def run_thinking_loop(
     if available_tools is None:
         available_tools = ["candlestick", "earnings", "news", "technical", "fundamentals"]
 
+    logger.info("Thinking loop start: stocks=%s, max_iterations=%d, tools=%s", stocks, max_iterations, available_tools)
     thinking_steps = []
     context = {"stocks": stocks, "data": input_data.copy() if input_data else {}}
     final_result = None
     tools_used = []
 
     for iteration in range(1, max_iterations + 1):
-        logger.info(f"Thinking iteration {iteration}/{max_iterations}")
+        logger.info("Thinking iteration %d/%d", iteration, max_iterations)
 
         thought = await think_step(system_prompt, context, available_tools)
         action = thought.get("action", "generate_response")
         reasoning = thought.get("reasoning", "")
+        logger.info("Iteration %d: action=%s, tool=%s", iteration, action, thought.get("tool"))
 
         if action == "call_tool":
             tool_name = thought.get("tool", "")
@@ -245,6 +251,7 @@ async def run_thinking_loop(
             "action": "generate_response", "result": final_result,
         })
 
+    logger.info("Thinking loop complete: status=success, tools_used=%s, iterations=%d", list(set(tools_used)), len(thinking_steps))
     return {
         "status": "success",
         "final_result": final_result,

@@ -24,6 +24,7 @@ router = APIRouter(prefix="/agents", tags=["agents-crud"])
 @router.post("", response_model=AgentResponse, status_code=201)
 async def create_agent(request: CreateAgentRequest):
     """Create a new specialized agent with a custom system prompt."""
+    logger.info("Creating agent: name=%s, type=%s", request.name, request.type)
     agent = store.create(
         name=request.name,
         description=request.description,
@@ -33,18 +34,22 @@ async def create_agent(request: CreateAgentRequest):
         temperature=request.temperature,
         max_tokens=request.max_tokens,
     )
+    logger.info("Created agent: id=%s", agent["agent_id"])
     return AgentResponse(**agent)
 
 
 @router.get("", response_model=list[AgentResponse])
 async def list_agents():
     """List all created agents (built-in + user)."""
-    return [AgentResponse(**a) for a in store.list_all()]
+    agents = store.list_all()
+    logger.debug("Listing agents: count=%d", len(agents))
+    return [AgentResponse(**a) for a in agents]
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)
 async def get_agent(agent_id: str):
     """Get details of a specific agent."""
+    logger.debug("Getting agent: id=%s", agent_id)
     agent = store.get(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
@@ -54,17 +59,20 @@ async def get_agent(agent_id: str):
 @router.delete("/{agent_id}")
 async def delete_agent(agent_id: str):
     """Delete an agent. Rejects deletion of built-in agents."""
+    logger.info("Deleting agent: id=%s", agent_id)
     try:
         if not store.delete(agent_id):
             raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    logger.info("Deleted agent: id=%s", agent_id)
     return {"status": "deleted", "agent_id": agent_id}
 
 
 @router.post("/{agent_id}/analyze", response_model=AnalysisResponse)
 async def analyze_with_agent(agent_id: str, request: AnalysisRequest):
     """Unified dispatch: data agents return data_source spec, analysis agents run LLM."""
+    logger.info("Analyze request: agent_id=%s, type=%s, stocks=%s", agent_id, request.task, request.stocks)
     agent = store.get(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
@@ -131,16 +139,19 @@ async def analyze_with_agent(agent_id: str, request: AnalysisRequest):
             )
 
         # Stage 2: Normalize
+        logger.info("Analyze agent_id=%s: running Stage 2 normalization", agent_id)
         s2 = Stage2Orchestrator()
         s2_result = await asyncio.to_thread(s2.execute, stage1)
 
         # Stage 3: LLM feature extraction
+        logger.info("Analyze agent_id=%s: running Stage 3 feature extraction", agent_id)
         s3 = Stage3Orchestrator(config={"enable_opik": False})
         s3_result = await asyncio.to_thread(s3.execute, s2_result["stage2_output"])
 
         stage3_output = s3_result["stage3_output"]
         features_dict = {sym: f.to_dict() for sym, f in stage3_output.symbol_features.items()}
 
+        logger.info("Analyze agent_id=%s: pipeline complete, symbols=%s", agent_id, list(features_dict.keys()))
         return AnalysisResponse(
             status="success", agent_id=agent_id, agent_name=agent["name"],
             analysis=json.dumps(features_dict, default=str), reasoning=None,
@@ -169,8 +180,10 @@ async def analyze_with_agent(agent_id: str, request: AnalysisRequest):
     try:
         result = await call_llm_full(messages, temperature=temperature, max_tokens=max_tokens)
     except Exception as e:
+        logger.error("Analyze agent_id=%s LLM call failed: %s", agent_id, e)
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")
 
+    logger.info("Analyze agent_id=%s: analysis complete, status=success", agent_id)
     return AnalysisResponse(
         agent_id=agent_id, agent_name=agent["name"],
         reasoning=result["reasoning"], analysis=result["content"],

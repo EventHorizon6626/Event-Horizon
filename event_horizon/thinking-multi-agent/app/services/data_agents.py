@@ -21,6 +21,7 @@ STAGE1_CONFIG = {
 
 def _run_agent_sync(tool_name: str, stocks: List[str], **overrides) -> dict:
     """Instantiate and run a Stage 1 agent synchronously."""
+    logger.info("Running agent: tool=%s, stocks=%s", tool_name, stocks)
     from event_horizon.data_pipeline.stage_1.agents.candlestick_agent import CandlestickAgent
     from event_horizon.data_pipeline.stage_1.agents.earnings_agent import EarningsAgent
     from event_horizon.data_pipeline.stage_1.agents.fundamentals_agent import FundamentalsAgent
@@ -39,28 +40,36 @@ def _run_agent_sync(tool_name: str, stocks: List[str], **overrides) -> dict:
 
     cls = agents.get(tool_name)
     if cls is None:
+        logger.error("Unknown tool: %s", tool_name)
         return {"error": f"Unknown tool: {tool_name}"}
 
     agent = cls(config)
-    return agent._execute_internal(stocks)
+    result = agent._execute_internal(stocks)
+    logger.info("Agent complete: tool=%s, result_keys=%s", tool_name, list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+    return result
 
 
 async def execute_tool(tool_name: str, stocks: List[str], **overrides) -> dict:
     """Execute a data tool (built-in Stage 1 agent or web search)."""
+    logger.info("Executing tool: %s, stocks=%s", tool_name, stocks)
     try:
         if tool_name == "web_search":
             from services.web_search import search_for_stocks
 
             topic = overrides.get("topic", "company history background")
-            return await search_for_stocks(stocks, topic)
-        return await asyncio.to_thread(_run_agent_sync, tool_name, stocks, **overrides)
+            result = await search_for_stocks(stocks, topic)
+        else:
+            result = await asyncio.to_thread(_run_agent_sync, tool_name, stocks, **overrides)
+        logger.info("Tool complete: %s, result_keys=%s", tool_name, list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
     except Exception as e:
-        logger.error(f"Tool execution failed for {tool_name}: {e}")
+        logger.error("Tool execution failed for %s: %s", tool_name, e)
         return {"error": str(e)}
 
 
 def summarize_data(data: dict) -> str:
     """Concise summary of collected data for thinking context."""
+    logger.debug("Summarizing data: keys=%s", list(data.keys()) if data else [])
     if not data:
         return "No data collected yet"
     labels = {
@@ -77,6 +86,7 @@ def summarize_data(data: dict) -> str:
 
 def summarize_tool_result(tool_name: str, result: Any) -> str:
     """Concise summary of a single tool result."""
+    logger.debug("Summarizing tool result: tool=%s", tool_name)
     if isinstance(result, dict):
         if "error" in result:
             return f"Error: {result['error']}"
