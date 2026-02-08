@@ -23,16 +23,18 @@ THINK_PROMPT_BASE = """You are an intelligent financial analysis agent with acce
 
 Your task: {system_prompt}
 
-Available data tools:
+Available data tools (ONLY request tools from this list):
 {tools_description}
 
 Current context:
 - Stocks: {stocks}
 - Data already collected: {collected_data_summary}
 
+IMPORTANT: Do NOT request a tool that is already listed in 'Data already collected'. Pick a DIFFERENT tool or generate your response.
+
 Decide your next action. You must respond in JSON only (no markdown, no explanation):
 
-Option 1 - Need data from existing tool:
+Option 1 - Need more data (pick a tool from the available list above):
 {{"action": "call_tool", "tool": "tool_name", "reasoning": "why I need this data"}}
 """
 
@@ -65,9 +67,12 @@ async def think_step(
     stocks = context.get("stocks", [])
     collected_data = context.get("data", {})
 
-    tools_desc = "\n".join(
-        f"- {t}: {TOOLS_DESCRIPTION.get(t, 'Custom data tool')}" for t in available_tools
-    )
+    if available_tools:
+        tools_desc = "\n".join(
+            f"- {t}: {TOOLS_DESCRIPTION.get(t, 'Custom data tool')}" for t in available_tools
+        )
+    else:
+        tools_desc = "(No additional standard tools available — all data has been collected)"
     data_summary = summarize_data(collected_data)
 
     # Build prompt: include create_data_agent option only when allowed
@@ -243,7 +248,27 @@ async def run_thinking_loop(
         logger.info("=== ITERATION %d/%d ===", iteration, max_iterations)
         logger.info("Iteration %d: context data_keys=%s, tools_used_so_far=%s", iteration, list(context["data"].keys()), tools_used)
 
-        thought = await think_step(system_prompt, context, available_tools, allow_agent_creation=allow_agent_creation)
+        # Core fix: filter out already-collected tools so the LLM sees a shrinking list
+        remaining_tools = [t for t in available_tools if t not in context["data"]]
+        logger.info("Iteration %d: remaining_tools=%s (filtered from %s)", iteration, remaining_tools, available_tools)
+
+        if not remaining_tools and not allow_agent_creation:
+            # No tools left and can't create exotic agents — generate final response immediately
+            logger.info("Iteration %d: no remaining tools and allow_agent_creation=False — forcing final response", iteration)
+            if discovery_only:
+                thinking_steps.append({
+                    "iteration": iteration, "thought": "All standard tools discovered",
+                    "action": "generate_response_discovery",
+                })
+            else:
+                final_result = await generate_final_response(system_prompt, context)
+                thinking_steps.append({
+                    "iteration": iteration, "thought": "All available tools exhausted",
+                    "action": "generate_response", "result": final_result,
+                })
+            break
+
+        thought = await think_step(system_prompt, context, remaining_tools, allow_agent_creation=allow_agent_creation)
         action = thought.get("action", "generate_response")
         reasoning = thought.get("reasoning", "")
         logger.info("Iteration %d: action=%s, tool=%s, reasoning=%s", iteration, action, thought.get("tool"), reasoning)
@@ -251,10 +276,10 @@ async def run_thinking_loop(
         if action == "call_tool":
             tool_name = thought.get("tool", "")
 
-            if tool_name not in available_tools:
+            if tool_name not in remaining_tools:
                 logger.warning(
-                    "Iteration %d: tool '%s' not in available tools %s — skipping",
-                    iteration, tool_name, available_tools,
+                    "Iteration %d: tool '%s' not in remaining tools %s — skipping",
+                    iteration, tool_name, remaining_tools,
                 )
                 thinking_steps.append({
                     "iteration": iteration, "thought": reasoning,
