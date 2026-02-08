@@ -28,26 +28,19 @@ Run the API server directly on your machine without Docker.
    source venv/bin/activate
 
    # Install dependencies
-   pip install -r requirements.txt
+   pip install -r event_horizon/thinking-multi-agent/app/requirements.txt
 
    # Run server
-   python api_server.py
+   SKIP_VLLM=true PYTHONPATH="$(pwd)" uvicorn main:app --host 0.0.0.0 --port 8030 --app-dir event_horizon/thinking-multi-agent/app
    ```
 
 3. **Test the API**
    ```bash
    # Health check
-   curl http://localhost:8001/health
+   curl http://localhost:8030/health
 
-   # Generate system prompt
-   curl -X POST http://localhost:8001/agents/generate-system-prompt \
-     -H "Content-Type: application/json" \
-     -d '{
-       "name": "Dividend Hunter",
-       "description": "Analyzes high-yield dividend stocks",
-       "team": "Team 1",
-       "category": "strategy_agent"
-     }'
+   # Swagger docs
+   open http://localhost:8030/docs
    ```
 
 ### Advantages
@@ -77,12 +70,12 @@ Run the API in a Docker container for production-like environment.
 
 3. **Check logs**
    ```bash
-   docker logs -f event-horizon-ai
+   docker logs -f event-horizon
    ```
 
 4. **Test the API**
    ```bash
-   curl http://localhost:8001/health
+   curl http://localhost:8030/health
    ```
 
 ### Advantages
@@ -97,8 +90,7 @@ Run the API in a Docker container for production-like environment.
 
 | File | Purpose | Used By |
 |------|---------|---------|
-| `.env` | Local development configuration | Local dev (run_local.sh) |
-| `.env.production` | Production/Docker configuration | Docker Compose |
+| `.env` | Local development configuration | Local dev (run_local.sh) and Docker Compose |
 | `.env.example` | Template with all options | Documentation |
 
 ---
@@ -108,18 +100,14 @@ Run the API in a Docker container for production-like environment.
 ### Local → Docker
 ```bash
 # Stop local server (CTRL+C if running)
-# Update .env.production with your keys
-vim .env.production
 # Start Docker
-docker compose up -d
+docker compose up -d --build
 ```
 
 ### Docker → Local
 ```bash
 # Stop Docker
 docker compose down
-# Update .env if needed
-vim .env
 # Start local server
 ./run_local.sh
 ```
@@ -128,15 +116,13 @@ vim .env
 
 ## ⚠️ Important Notes
 
-1. **API Keys**: `.env` and `.env.production` use separate API keys
-   - Local: Your development/free tier key
-   - Production: Your production/paid tier key
+1. **API Keys**: Configure in `.env` (used by both local dev and Docker)
 
-2. **Model Configuration**: Both use `gemini-2.0-flash` (correct model name)
+2. **Model Configuration**: Set `LLM_MODEL` in `.env` (default: `mistralai/Ministral-3-14B-Reasoning-2512`)
 
 3. **Ports**:
-   - Local dev: `127.0.0.1:8001`
-   - Docker: `127.0.0.1:8001` (same, but isolated)
+   - Local dev: `0.0.0.0:8030`
+   - Docker: `0.0.0.0:8030`
 
 4. **Hot Reload**:
    - Local: Enabled by default (uvicorn reload)
@@ -146,9 +132,9 @@ vim .env
 
 ## 🐛 Troubleshooting
 
-### "Failed to connect to localhost:8001"
+### "Failed to connect to localhost:8030"
 - Check if server is running: `ps aux | grep uvicorn` (local) or `docker ps` (Docker)
-- Check logs: `docker logs event-horizon-ai` (Docker)
+- Check logs: `docker logs event-horizon` (Docker)
 
 ### "404 NOT_FOUND - models/gemini-xxx is not found"
 - Update model name in `.env` or `.env.production` to: `gemini-2.0-flash`
@@ -172,10 +158,11 @@ deactivate                        # Deactivate virtual environment
 docker compose up -d              # Start containers
 docker compose down               # Stop containers
 docker compose up -d --build      # Rebuild and start
-docker logs -f event-horizon-ai   # View logs
+docker logs -f event-horizon      # View logs
 docker ps                         # List containers
 
 # TESTING
-curl http://localhost:8001/health                           # Health check
-curl http://localhost:8001/api/v1/supported-agents         # List agents
+curl http://localhost:8030/health                           # Health check
+curl http://localhost:8030/agents                           # List agents
+open http://localhost:8030/docs                             # Swagger UI
 ```

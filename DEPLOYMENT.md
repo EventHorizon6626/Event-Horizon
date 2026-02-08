@@ -6,14 +6,12 @@
 /home/vytrieu/EventHorizon/
 ├── FE/                  # React Frontend (nginx)
 ├── BE/                  # Node.js Backend (PM2)
-└── Event-Horizon-AI/    # Python AI API (Docker or systemd)
+└── Event-Horizon-AI/    # Python AI API (Docker)
 ```
 
 ## Deployment Methods
 
-You can deploy using either:
 1. **Docker** (Recommended) - Isolated, reproducible, easy updates
-2. **Systemd** - Direct installation, simpler for debugging
 
 ---
 
@@ -35,18 +33,15 @@ cp .env.example .env
 nano .env
 ```
 
-### 4. Install Systemd Service
+### 3. Build and Start
 ```bash
-sudo cp evth-ai.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable evth-ai
-sudo systemctl start evth-ai
+docker compose up -d --build
 ```
 
-### 5. Verify Service
+### 4. Verify Service
 ```bash
-sudo systemctl status evth-ai
-curl http://localhost:8001/health
+docker ps
+curl http://localhost:8030/health
 ```
 
 ## Continuous Deployment
@@ -104,7 +99,7 @@ sudo systemctl start evth-ai-deploy
 
 ## API Endpoints
 
-Once deployed, the API will be available at `http://localhost:8001`:
+Once deployed, the API will be available at `http://localhost:8030`:
 
 ### Health Check
 ```bash
@@ -137,7 +132,7 @@ const axios = require('axios');
 
 async function analyzePortfolio(symbols) {
   try {
-    const response = await axios.post('http://localhost:8001/api/v1/analyze-portfolio', {
+    const response = await axios.post('http://localhost:8030/api/v1/analyze-portfolio', {
       portfolio: symbols,
       portfolio_id: `portfolio_${Date.now()}`
     });
@@ -161,27 +156,20 @@ app.post('/api/portfolio/analyze', async (req, res) => {
 
 ### Check Service Status
 ```bash
-sudo systemctl status evth-ai
-```
-
-### View Logs
-```bash
-# Service logs
-sudo journalctl -u evth-ai -f
-
-# Deployment logs
-tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_docker.log
-# or
-tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_systemd.log
+docker ps
+docker logs -f event-horizon
 ```
 
 ### Test API
 ```bash
 # Health check
-curl http://localhost:8001/health
+curl http://localhost:8030/health
+
+# Swagger docs
+open http://localhost:8030/docs
 
 # Full analysis
-curl -X POST http://localhost:8001/api/v1/analyze-portfolio \
+curl -X POST http://localhost:8030/api/v1/analyze-portfolio \
   -H "Content-Type: application/json" \
   -d '{"portfolio": ["AAPL", "TSLA"]}'
 ```
@@ -197,7 +185,7 @@ server {
     server_name ai.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:8001;
+        proxy_pass http://localhost:8030;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -207,30 +195,20 @@ server {
 
 ## Troubleshooting
 
-### Service won't start
+### Container won't start
 ```bash
 # Check logs
-sudo journalctl -u evth-ai -n 50
+docker logs event-horizon
 
 # Test manually
-cd /home/vytrieu/EventHorizon/Event-Horizon-AI
-source venv/bin/activate
-python api_server.py
-```
-
-### Python dependencies issue
-```bash
-source venv/bin/activate
-pip install --upgrade -r requirements.txt
+./run_local.sh
 ```
 
 ### Port already in use
 ```bash
-# Check what's using port 8001
-sudo lsof -i :8001
+# Check what's using port 8030
+sudo lsof -i :8030
 
-# Change port in evth-ai.service if needed
-sudo nano /etc/systemd/system/evth-ai.service
-sudo systemctl daemon-reload
-sudo systemctl restart evth-ai
+# Restart container
+docker compose restart
 ```

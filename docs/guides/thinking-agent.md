@@ -178,7 +178,7 @@ Creates a system prompt for a suggested custom data agent.
 ```python
 import requests
 
-response = requests.post("http://localhost:8001/agents/think", json={
+response = requests.post("http://localhost:8030/agents/think", json={
     "stocks": ["AAPL", "MSFT"],
     "system_prompt": "You are a dividend-focused analyst. Find stocks with sustainable high dividends.",
     "max_iterations": 5,
@@ -195,7 +195,7 @@ print(f"Final result: {result['final_result']}")
 ### cURL
 
 ```bash
-curl -X POST http://localhost:8001/agents/think \
+curl -X POST http://localhost:8030/agents/think \
   -H "Content-Type: application/json" \
   -d '{
     "stocks": ["AAPL"],

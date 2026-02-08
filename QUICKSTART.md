@@ -53,15 +53,15 @@ docker-compose logs -f
 ### Step 6: Test API
 ```bash
 # Health check
-curl http://localhost:8001/health
+curl http://localhost:8030/health
 
 # Full test
-curl -X POST http://localhost:8001/api/v1/analyze-portfolio \
+curl -X POST http://localhost:8030/api/v1/analyze-portfolio \
   -H "Content-Type: application/json" \
   -d '{"portfolio": ["AAPL", "TSLA"]}'
 ```
 
-✅ **Done!** AI API is running on `http://localhost:8001`
+✅ **Done!** AI API is running on `http://localhost:8030`
 
 ---
 
@@ -92,12 +92,12 @@ Now AI will auto-update every 2 minutes when you push to GitHub!
 /home/vytrieu/EventHorizon/
 ├── FE/                     # React app → nginx
 ├── BE/                     # Node.js → PM2
-└── Event-Horizon-AI/       # Python AI → Docker:8001
+└── Event-Horizon-AI/       # Python AI → Docker:8030
 ```
 
 **Communication Flow:**
 ```
-FE → BE → AI (localhost:8001) → Stage 1 Analysis → Response
+FE → BE → AI (localhost:8030) → Stage 1 Analysis → Response
 ```
 
 ---
@@ -115,7 +115,7 @@ app.post('/api/portfolio/analyze', async (req, res) => {
     const { symbols } = req.body;
 
     // Call AI service
-    const response = await axios.post('http://localhost:8001/api/v1/analyze-portfolio', {
+    const response = await axios.post('http://localhost:8030/api/v1/analyze-portfolio', {
       portfolio: symbols,
       portfolio_id: `portfolio_${Date.now()}`
     });
@@ -149,10 +149,10 @@ docker-compose up -d --build
 docker ps | grep event-horizon
 
 # Enter container
-docker-compose exec ai-service bash
+docker compose exec event-horizon bash
 
-# Check deployment logs
-tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_ai_docker.log
+# Check container logs
+docker compose logs -f
 ```
 
 ---
@@ -166,7 +166,7 @@ docker-compose logs
 
 ### Port already in use
 ```bash
-sudo lsof -i :8001
+sudo lsof -i :8030
 # Kill the process or change port in docker-compose.yml
 ```
 
@@ -174,7 +174,7 @@ sudo lsof -i :8001
 ```bash
 # Check container health
 docker ps
-docker inspect event-horizon-ai
+docker inspect event-horizon
 
 # Restart
 docker-compose restart
@@ -194,13 +194,10 @@ docker-compose up -d
 
 ```bash
 # Real-time logs
-docker-compose logs -f ai-service
+docker compose logs -f event-horizon
 
 # Resource usage
-docker stats event-horizon-ai
-
-# Deployment loop logs
-tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_ai_docker.log
+docker stats event-horizon
 ```
 
 ---
@@ -214,7 +211,7 @@ tail -f /home/vytrieu/EventHorizon/.deploy_logs/deploy_ai_docker.log
 - Technical (SMA, RSI, MACD)
 - Fundamentals (P/E, ROE, ratios)
 
-✅ **REST API** on port 8001
+✅ **REST API** on port 8030
 ✅ **Auto-deployment** every 2 minutes
 ✅ **Docker isolation** (no dependency conflicts)
 ✅ **Health checks** and auto-restart
