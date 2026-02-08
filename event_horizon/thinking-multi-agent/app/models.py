@@ -105,7 +105,7 @@ class HealthResponse(BaseModel):
     timestamp: Optional[str] = None
 
 
-# ── Request models from api_server.py ──
+# ── Request models for legacy agent endpoints ──
 
 class PortfolioRequest(BaseModel):
     portfolio: List[str]
