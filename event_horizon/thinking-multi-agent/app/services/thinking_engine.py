@@ -172,39 +172,127 @@ Provide your final analysis in JSON format. Include:
         return {"error": str(e)}
 
 
-def generate_data_agent_prompt(thought: dict) -> str:
-    """Generate system prompt for a suggested custom data agent."""
+def _build_data_agent_prompt_template(
+    thought: dict, stocks: List[str] = None, analyzer_task: str = "",
+) -> str:
+    """Build an enhanced fallback system prompt for a custom data agent.
+
+    Used when the LLM meta-prompt call fails or returns an unusable result.
+    """
     data_type = thought.get("data_type", "specialized data")
+    agent_name = thought.get("agent_name", "Custom Data Agent")
     description = thought.get("agent_description", "Retrieve and process financial data")
+    stocks_str = ", ".join(stocks) if stocks else "the given stocks"
 
-    prompt = f"""You are a specialized data retrieval agent.
+    prompt = f"""You are a specialized {data_type} data retrieval agent ("{agent_name}").
 
-Your job is to fetch {data_type} data for the given stocks.
+Your job: {description}
 
-Data to retrieve: {description}
+Target stocks: {stocks_str}
+{"Analysis context: " + analyzer_task if analyzer_task else ""}
 
-For each stock, retrieve the relevant data and return it in a structured JSON format.
-Include timestamps and source information where available.
+## Data Retrieval Strategy
 
-Output format:
+You have access to the `web_search` tool. Use it effectively:
+1. Search for specific, targeted queries — e.g. "{stocks_str} {data_type} 2024 2025"
+2. Try multiple search angles if the first query doesn't yield good results
+3. Look for authoritative sources (SEC EDGAR, company IR pages, financial databases)
+4. Extract specific numbers, dates, and facts — not just summaries
+
+## Suggested search queries:
+- "{stocks_str} {data_type} latest"
+- "{stocks_str} {data_type} SEC filing"
+- "{stocks_str} {data_type} financial data 2025"
+
+## What to collect for each stock:
+- Key data points relevant to {data_type}
+- Dates and time periods covered
+- Source URLs for verification
+- Any notable trends or changes
+
+## Output format:
+Return structured JSON:
 {{
     "status": "success",
     "data": {{
         "<SYMBOL>": {{
-            // relevant data fields
+            "data_type": "{data_type}",
+            "key_findings": ["finding1", "finding2"],
+            "data_points": {{}},
+            "sources": ["url1", "url2"],
+            "period_covered": "date range"
         }}
     }},
     "metadata": {{
         "retrieved_at": "ISO timestamp",
-        "source": "data source name"
+        "source": "data source name",
+        "query_strategy": "description of search approach"
     }}
 }}"""
     logger.info(
-        "generate_data_agent_prompt: data_type=%s, description=%s, prompt_len=%d",
-        data_type, description, len(prompt),
+        "_build_data_agent_prompt_template: data_type=%s, stocks=%s, prompt_len=%d",
+        data_type, stocks, len(prompt),
     )
-    logger.debug("generate_data_agent_prompt: full prompt:\n%s", prompt)
     return prompt
+
+
+async def generate_data_agent_prompt(
+    thought: dict, stocks: List[str] = None, analyzer_task: str = "",
+) -> str:
+    """Generate a rich system prompt for a custom data agent via LLM meta-prompting.
+
+    Falls back to _build_data_agent_prompt_template() if the LLM call fails.
+    """
+    data_type = thought.get("data_type", "specialized data")
+    agent_name = thought.get("agent_name", "Custom Data Agent")
+    description = thought.get("agent_description", "Retrieve and process financial data")
+    stocks_str = ", ".join(stocks) if stocks else "financial stocks"
+
+    meta_prompt = (
+        f"You are an expert at creating system prompts for AI data-retrieval agents in a financial analysis system.\n\n"
+        f"Create a detailed system prompt for a data agent with these characteristics:\n\n"
+        f"**Agent Name:** {agent_name}\n"
+        f"**Data Type:** {data_type}\n"
+        f"**Description:** {description}\n"
+        f"**Target Stocks:** {stocks_str}\n"
+        f"**Analysis Context:** {analyzer_task or 'General financial analysis'}\n\n"
+        f"The agent has access to a `web_search` tool and must retrieve real data.\n\n"
+        f"The system prompt MUST include:\n"
+        f"1. Clear role definition — what specific {data_type} data to retrieve\n"
+        f"2. Specific data points to look for (e.g., exact metrics, filing types, date ranges)\n"
+        f"3. Search strategy — 3-5 concrete example search queries using the target stocks\n"
+        f"4. Quality checks — how to validate the data is accurate and current\n"
+        f"5. Structured JSON output format with fields specific to {data_type}\n"
+        f"6. Instructions to include source URLs and retrieval timestamps\n\n"
+        f'Write ONLY the system prompt. Start directly with "You are..."'
+    )
+
+    logger.info(
+        "generate_data_agent_prompt: calling LLM meta-prompt for data_type=%s, stocks=%s",
+        data_type, stocks,
+    )
+
+    try:
+        result = await call_llm(meta_prompt)
+        cleaned = result.strip() if result else ""
+
+        if len(cleaned) >= 100:
+            logger.info(
+                "generate_data_agent_prompt: LLM meta-prompt success, prompt_len=%d",
+                len(cleaned),
+            )
+            return cleaned
+
+        logger.warning(
+            "generate_data_agent_prompt: LLM returned short/empty result (len=%d), falling back to template",
+            len(cleaned),
+        )
+    except Exception as e:
+        logger.warning(
+            "generate_data_agent_prompt: LLM meta-prompt failed (%s), falling back to template", e,
+        )
+
+    return _build_data_agent_prompt_template(thought, stocks, analyzer_task)
 
 
 async def run_thinking_loop(
@@ -363,7 +451,7 @@ async def run_thinking_loop(
                 },
             })
 
-            suggested_prompt = generate_data_agent_prompt(thought)
+            suggested_prompt = await generate_data_agent_prompt(thought, stocks, system_prompt)
             logger.info(
                 "=== PAUSING THINKING LOOP === reason=need_data_agent, "
                 "suggested_agent_name=%s, suggested_prompt_len=%d, tools_used=%s, iteration=%d",
