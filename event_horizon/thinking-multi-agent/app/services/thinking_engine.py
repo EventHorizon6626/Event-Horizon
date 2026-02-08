@@ -196,14 +196,19 @@ async def run_thinking_loop(
     input_data: dict = None,
     max_iterations: int = 5,
     available_tools: List[str] = None,
+    discovery_only: bool = False,
 ) -> dict:
-    """Execute the full ReAct thinking loop."""
+    """Execute the full ReAct thinking loop.
+
+    When discovery_only=True, tools are not executed — the loop only discovers
+    which tools the LLM wants. Returns tools_discovered list instead of results.
+    """
     if available_tools is None:
         available_tools = ["candlestick", "earnings", "news", "technical", "fundamentals"]
 
     logger.info(
-        "=== THINKING LOOP START === stocks=%s, max_iterations=%d, tools=%s, has_input_data=%s",
-        stocks, max_iterations, available_tools, input_data is not None,
+        "=== THINKING LOOP START === stocks=%s, max_iterations=%d, tools=%s, has_input_data=%s, discovery_only=%s",
+        stocks, max_iterations, available_tools, input_data is not None, discovery_only,
     )
     if input_data:
         logger.info("Thinking loop input_data keys: %s", list(input_data.keys()))
@@ -213,6 +218,9 @@ async def run_thinking_loop(
     context = {"stocks": stocks, "data": input_data.copy() if input_data else {}}
     final_result = None
     tools_used = []
+    tools_discovered: List[str] = []
+    consecutive_skip_count = 0
+    last_skipped_tool = None
 
     for iteration in range(1, max_iterations + 1):
         logger.info("=== ITERATION %d/%d ===", iteration, max_iterations)
@@ -238,30 +246,61 @@ async def run_thinking_loop(
                 continue
 
             if tool_name in context["data"]:
-                logger.info("Iteration %d: already have '%s' data — skipping", iteration, tool_name)
+                # Consecutive-skip guard: break after 2 consecutive skips of already-discovered tools
+                if tool_name == last_skipped_tool:
+                    consecutive_skip_count += 1
+                else:
+                    consecutive_skip_count = 1
+                    last_skipped_tool = tool_name
+
+                logger.info(
+                    "Iteration %d: already have '%s' data — skipping (consecutive_skip=%d)",
+                    iteration, tool_name, consecutive_skip_count,
+                )
                 thinking_steps.append({
                     "iteration": iteration, "thought": reasoning,
                     "action": "skip", "message": f"Already have {tool_name} data",
                 })
+
+                if consecutive_skip_count >= 2:
+                    logger.info(
+                        "Iteration %d: breaking out — %d consecutive skips of '%s'",
+                        iteration, consecutive_skip_count, tool_name,
+                    )
+                    break
                 continue
 
-            logger.info("Iteration %d: executing tool '%s' for stocks=%s", iteration, tool_name, stocks)
-            tool_result = await execute_tool(tool_name, stocks)
-            context["data"][tool_name] = tool_result
-            tools_used.append(tool_name)
+            # Reset consecutive skip counter on successful new tool
+            consecutive_skip_count = 0
+            last_skipped_tool = None
 
-            tool_summary = summarize_tool_result(tool_name, tool_result)
-            logger.info("Iteration %d: tool '%s' complete — summary: %s", iteration, tool_name, tool_summary)
-            logger.debug(
-                "Iteration %d: tool '%s' full result:\n%s",
-                iteration, tool_name, json.dumps(tool_result, indent=2, default=str)[:5000],
-            )
+            if discovery_only:
+                # Discovery mode: don't execute the tool, just record it
+                logger.info("Iteration %d: DISCOVERY — recording tool '%s' (not executing)", iteration, tool_name)
+                tools_discovered.append(tool_name)
+                context["data"][tool_name] = {"_discovered": True}
+                thinking_steps.append({
+                    "iteration": iteration, "thought": reasoning,
+                    "action": "discover_tool", "tool": tool_name,
+                })
+            else:
+                logger.info("Iteration %d: executing tool '%s' for stocks=%s", iteration, tool_name, stocks)
+                tool_result = await execute_tool(tool_name, stocks)
+                context["data"][tool_name] = tool_result
+                tools_used.append(tool_name)
 
-            thinking_steps.append({
-                "iteration": iteration, "thought": reasoning,
-                "action": "call_tool", "tool": tool_name,
-                "tool_result_summary": tool_summary,
-            })
+                tool_summary = summarize_tool_result(tool_name, tool_result)
+                logger.info("Iteration %d: tool '%s' complete — summary: %s", iteration, tool_name, tool_summary)
+                logger.debug(
+                    "Iteration %d: tool '%s' full result:\n%s",
+                    iteration, tool_name, json.dumps(tool_result, indent=2, default=str)[:5000],
+                )
+
+                thinking_steps.append({
+                    "iteration": iteration, "thought": reasoning,
+                    "action": "call_tool", "tool": tool_name,
+                    "tool_result_summary": tool_summary,
+                })
 
         elif action == "create_data_agent":
             agent_name = thought.get("agent_name", "Custom Data Agent")
@@ -309,18 +348,43 @@ async def run_thinking_loop(
                     "iteration": iteration,
                 },
                 "tools_used": tools_used,
+                "tools_discovered": tools_discovered,
                 "iterations_used": iteration,
             }
 
         else:
             # generate_response or unknown action
-            logger.info("Iteration %d: generating final response (action=%s)", iteration, action)
-            final_result = await generate_final_response(system_prompt, context)
-            thinking_steps.append({
-                "iteration": iteration, "thought": reasoning,
-                "action": "generate_response", "result": final_result,
-            })
-            break
+            if discovery_only:
+                logger.info(
+                    "Iteration %d: discovery mode — LLM wants to generate response, no more tools needed. "
+                    "tools_discovered=%s", iteration, tools_discovered,
+                )
+                thinking_steps.append({
+                    "iteration": iteration, "thought": reasoning,
+                    "action": "generate_response_discovery",
+                })
+                break
+            else:
+                logger.info("Iteration %d: generating final response (action=%s)", iteration, action)
+                final_result = await generate_final_response(system_prompt, context)
+                thinking_steps.append({
+                    "iteration": iteration, "thought": reasoning,
+                    "action": "generate_response", "result": final_result,
+                })
+                break
+
+    # Discovery mode: return discovered tools without generating a response
+    if discovery_only:
+        logger.info(
+            "=== THINKING LOOP COMPLETE (discovery) === tools_discovered=%s, iterations=%d",
+            tools_discovered, len(thinking_steps),
+        )
+        return {
+            "status": "discovery_complete",
+            "tools_discovered": tools_discovered,
+            "thinking_steps": thinking_steps,
+            "iterations_used": len(thinking_steps),
+        }
 
     if final_result is None:
         logger.info("Max iterations (%d) reached without final response — generating now", max_iterations)
@@ -344,5 +408,6 @@ async def run_thinking_loop(
         "final_result": final_result,
         "thinking_steps": thinking_steps,
         "tools_used": list(set(tools_used)),
+        "tools_discovered": tools_discovered,
         "iterations_used": len(thinking_steps),
     }
