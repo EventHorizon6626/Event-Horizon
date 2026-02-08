@@ -1,5 +1,6 @@
 """Named agent endpoints — data agents, bull-bear, custom, prompt gen, think."""
 
+import json
 import logging
 import os
 
@@ -7,14 +8,20 @@ from fastapi import APIRouter, HTTPException
 
 from models import (
     AgentRequest,
+    AnalysisResponse,
     AnalyzerRequest,
     CustomAgentRequest,
     GenerateSystemPromptRequest,
     ThinkingAgentRequest,
 )
 from services.data_agents import STAGE1_CONFIG, execute_tool
-from services.llm import call_llm
-from services.thinking_engine import run_thinking_loop
+from services.llm import LLM_MODEL, call_llm, call_llm_full
+from services.thinking_engine import (
+    TOOLS_DESCRIPTION,
+    generate_data_agent_prompt,
+    run_thinking_loop,
+    think_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,15 +133,98 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
 
 # ── Custom agent ──
 
-@router.post("/custom")
+@router.post("/custom", response_model=AnalysisResponse)
 async def run_custom_agent(request: CustomAgentRequest):
-    """Execute a custom agent with user-provided system prompt."""
+    """Execute a custom agent with user-provided system prompt.
+
+    If input_data is provided (from connected pipeline nodes), runs analysis
+    directly. Otherwise, uses a thinking step to discover what data agents
+    are needed and returns them as required_agents with status='needs_data'.
+    """
     try:
         logger.info(f"Running Custom Agent for {request.stocks}")
+
+        # ── Path A: we already have data from connected nodes ──
+        # input_data is expected to be SymbolFeatures (EH DNA) from the pipeline
+        if request.input_data:
+            user_prompt = request.user_prompt or f"Analyze the following stocks: {request.stocks}"
+            data_summary = json.dumps(request.input_data, indent=2, default=str)[:8000]
+            messages = [
+                {"role": "system", "content": request.system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        f"{user_prompt}\n\n"
+                        f"Stocks: {request.stocks}\n\n"
+                        f"EH-processed SymbolFeatures from data pipeline:\n{data_summary}\n\n"
+                        f"Provide your analysis based on these extracted features."
+                    ),
+                },
+            ]
+            result = await call_llm_full(messages)
+            return AnalysisResponse(
+                status="success",
+                analysis=result["content"],
+                reasoning=result.get("reasoning"),
+                model=result["model"],
+                usage=result.get("usage"),
+                agent_name="custom",
+            )
+
+        # ── Path B: no data — discover what's needed ──
+        available_tools = list(TOOLS_DESCRIPTION.keys())
+        context = {"stocks": request.stocks, "data": {}}
+        thought = await think_step(request.system_prompt, context, available_tools)
+        action = thought.get("action", "generate_response")
+
+        if action == "create_data_agent":
+            return AnalysisResponse(
+                status="needs_data",
+                model=LLM_MODEL,
+                analysis=None,
+                required_agents=[
+                    {
+                        "name": thought.get("agent_name", "custom-data-agent"),
+                        "description": thought.get("agent_description", ""),
+                        "type": "data",
+                        "source": "web_search",
+                        "system_prompt": generate_data_agent_prompt(thought),
+                        "temperature": "0.3",
+                        "max_tokens": "4096",
+                    }
+                ],
+            )
+
+        if action == "call_tool":
+            tool_name = thought.get("tool", "")
+            if tool_name in TOOLS_DESCRIPTION:
+                return AnalysisResponse(
+                    status="needs_data",
+                    model=LLM_MODEL,
+                    analysis=None,
+                    required_agents=[
+                        {
+                            "name": tool_name,
+                            "description": TOOLS_DESCRIPTION[tool_name],
+                            "type": "data",
+                            "source": "built-in" if tool_name != "web_search" else "web_search",
+                            "system_prompt": f"Fetch {tool_name} data for stocks",
+                            "temperature": "0.3",
+                            "max_tokens": "4096",
+                        }
+                    ],
+                )
+
+        # action == "generate_response" — LLM thinks it can answer without data
         user_prompt = request.user_prompt or f"Analyze the following stocks: {request.stocks}"
-        prompt = f"{user_prompt}\n\nStocks to analyze: {request.stocks}\n\nProvide your analysis in a structured JSON format."
-        result = await call_llm(prompt, request.system_prompt)
-        return {"status": "success", "agent": "custom", "result": result}
+        result = await call_llm(user_prompt, request.system_prompt)
+        return AnalysisResponse(
+            status="success",
+            analysis=result,
+            model=LLM_MODEL,
+            agent_name="custom",
+        )
+
     except Exception as e:
         logger.error(f"Custom Agent failed: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -134,6 +134,7 @@ class CustomAgentRequest(BaseModel):
     stocks: List[str]
     system_prompt: str
     user_prompt: Optional[str] = None
+    input_data: Optional[dict] = None
     llm_config: Optional[dict] = None
 
 

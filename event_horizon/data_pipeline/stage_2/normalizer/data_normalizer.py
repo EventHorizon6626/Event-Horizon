@@ -15,6 +15,7 @@ from event_horizon.data_pipeline.stage_1.models.schemas import (
     EarningsData,
     TechnicalData,
     FundamentalsData,
+    WebSearchData,
 )
 from event_horizon.data_pipeline.stage_2.models.schemas import NormalizedSymbolData
 
@@ -97,6 +98,15 @@ class DataNormalizer:
             except Exception as e:
                 errors.append(f"Earnings normalization failed: {str(e)}")
                 self.logger.error(f"{symbol}: Earnings error - {e}")
+
+        # Normalize web search
+        if symbol in stage1_output.web_search_data:
+            ws_data = stage1_output.web_search_data[symbol]
+            try:
+                normalized.web_search = self._normalize_web_search_data(ws_data)
+            except Exception as e:
+                errors.append(f"Web search normalization failed: {str(e)}")
+                self.logger.error(f"{symbol}: Web search error - {e}")
 
         # Update metadata
         normalized.errors = errors
@@ -207,6 +217,26 @@ class DataNormalizer:
             "data_source": earnings_data.data_source,
         }
 
+    def _normalize_web_search_data(self, ws_data: WebSearchData) -> Dict[str, Any]:
+        """Normalize web search data"""
+        if ws_data.error:
+            return {"error": ws_data.error}
+
+        return {
+            "answer": ws_data.answer,
+            "articles": [
+                {
+                    "title": r.get("title", ""),
+                    "content": r.get("content", ""),
+                    "url": r.get("url", ""),
+                }
+                for r in ws_data.results
+            ],
+            "total_count": len(ws_data.results),
+            "query": ws_data.query,
+            "data_source": ws_data.data_source,
+        }
+
     def _calculate_quality_score(self, normalized: NormalizedSymbolData) -> float:
         """
         Calculate data quality score (0-1)
@@ -214,7 +244,7 @@ class DataNormalizer:
         Based on completeness and absence of errors
         """
         score = 0.0
-        max_score = 5.0  # 5 data categories
+        max_score = 6.0  # 6 data categories
 
         # Price data
         if normalized.price_data and not normalized.price_data.get("error"):
@@ -234,6 +264,10 @@ class DataNormalizer:
 
         # Earnings
         if normalized.earnings and not normalized.earnings.get("error"):
+            score += 1.0
+
+        # Web search
+        if normalized.web_search and not normalized.web_search.get("error"):
             score += 1.0
 
         # Normalize to 0-1

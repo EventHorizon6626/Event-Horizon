@@ -16,6 +16,7 @@ TOOLS_DESCRIPTION = {
     "news": "Recent news articles, headlines, and press releases about the stocks",
     "technical": "Technical indicators including RSI, MACD, SMA, EMA, Bollinger Bands",
     "fundamentals": "Fundamental metrics like P/E ratio, P/B ratio, EPS, dividend yield, market cap",
+    "web_search": "Web search for general information: company history, background, industry context, non-market data",
 }
 
 THINK_PROMPT = """You are an intelligent financial analysis agent with access to data tools.
