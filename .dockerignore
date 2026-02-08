@@ -40,7 +40,6 @@ ENV/
 .gitattributes
 
 # Docker
-Dockerfile
 docker-compose*.yml
 .dockerignore
 

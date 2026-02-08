@@ -1,47 +1,22 @@
-# Event Horizon - Multi-Agent System
-# Production-ready Docker image
+FROM vllm/vllm-openai:latest
 
-FROM python:3.11-slim as base
+# Install app dependencies first (layer caching)
+COPY event_horizon/thinking-multi-agent/app/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Copy the full event_horizon package (needed for Stage 1 agents, analyzers, etc.)
+COPY event_horizon/ /opt/event_horizon/
 
-# Set working directory
-WORKDIR /app
+# Copy the FastAPI app
+COPY event_horizon/thinking-multi-agent/app/ /app/
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Copy the entrypoint script
+COPY event_horizon/thinking-multi-agent/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Copy requirements first (for stage caching)
-COPY requirements.txt .
+# event_horizon package must be importable
+ENV PYTHONPATH="/opt"
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8030
 
-# Copy application code
-COPY . .
-
-# Create directories for data and logs
-RUN mkdir -p /app/data /app/logs /app/results
-
-# Create non-root user for security
-RUN useradd -m -u 1000 eventuser && \
-    chown -R eventuser:eventuser /app
-
-# Switch to non-root user
-USER eventuser
-
-# Expose API port
-EXPOSE 8001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
-
-# Default command - Run FastAPI server
-CMD ["uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8001"]
+ENTRYPOINT ["/entrypoint.sh"]
