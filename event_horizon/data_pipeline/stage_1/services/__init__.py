@@ -7,7 +7,10 @@ Agents use these services to fetch and process data.
 """
 
 # News services
-from event_horizon.data_pipeline.stage_1.services.news_api_client import NewsAPIClient
+from event_horizon.data_pipeline.stage_1.services.news_search_client import (
+    tavily_news_search,
+    exa_news_search,
+)
 
 # Financial services
 from event_horizon.data_pipeline.stage_1.services.financial_data_client import FinancialDataClient
@@ -17,7 +20,8 @@ from event_horizon.data_pipeline.stage_1.services.chart_data_client import Chart
 from event_horizon.data_pipeline.stage_1.services.massive_chart_client import MassiveChartClient
 
 __all__ = [
-    "NewsAPIClient",
+    "tavily_news_search",
+    "exa_news_search",
     "FinancialDataClient",
     "ChartDataClient",
     "MassiveChartClient",
