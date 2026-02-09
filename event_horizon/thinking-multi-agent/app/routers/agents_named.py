@@ -99,7 +99,7 @@ async def run_fundamentals_agent(request: AgentRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/web_search")
+@router.post("/web-search")
 async def run_web_search_agent(request: AgentRequest):
     """Execute Web Search agent for given stocks."""
     try:
