@@ -387,22 +387,22 @@ async def generate_agent_system_prompt(request: GenerateSystemPromptRequest):
             )
         else:
             meta_prompt = (
-                f"You are an expert at creating system prompts for AI agents in a multi-agent trading system.\n\n"
+                f"You are an expert at creating system prompts for AI agents in a multi-agent financial analysis system.\n\n"
                 f"Create a focused system prompt for an agent with the following characteristics:\n\n"
                 f"**Agent Name:** {request.name}\n"
-                f"**Description:** {description_text}\n"
-                f"**Category:** {category_context}\n\n"
-                f"IMPORTANT CONSTRAINTS:\n"
-                f"- Stay strictly focused on what the description says — do NOT expand scope\n"
+                f"**CORE PURPOSE (follow this exactly):** {description_text}\n\n"
+                f"STRICT CONSTRAINTS:\n"
+                f"- The description above is the SINGLE SOURCE OF TRUTH for what this agent does\n"
+                f"- Every responsibility must trace directly back to the description — do NOT infer, expand, or add tangential capabilities\n"
+                f"- Do NOT add financial analysis domains (technical, fundamental, sentiment, etc.) unless the description explicitly mentions them\n"
+                f"- Do NOT add data requirements beyond what the description implies\n"
                 f"- Keep the prompt concise: 800-1500 characters maximum\n"
-                f"- Define 3-5 specific responsibilities directly related to the description\n"
-                f"- Use a simple JSON output format relevant to the described task (not exhaustive)\n"
-                f"- Do NOT add unrelated analysis domains or data requirements\n\n"
+                f"- Define 3-5 specific responsibilities, each one directly derived from the description\n\n"
                 f"The system prompt should:\n"
-                f"1. Define the agent's role based on the description\n"
-                f"2. List 3-5 responsibilities tied to the description\n"
-                f"3. Specify expected input (stocks list + relevant data)\n"
-                f"4. Define a concise JSON output format\n\n"
+                f"1. Define the agent's role using the exact language of the description\n"
+                f"2. List 3-5 responsibilities — every one traceable to the description\n"
+                f"3. Specify expected input (stocks list + only data relevant to the described task)\n"
+                f"4. Define a concise JSON output format relevant to the described task\n\n"
                 f'Write ONLY the system prompt. Start directly with "You are..."'
             )
 
