@@ -296,6 +296,84 @@ async def generate_data_agent_prompt(
     return _build_data_agent_prompt_template(thought, stocks, analyzer_task)
 
 
+DISCOVER_TOOLS_PROMPT = """You are an intelligent financial analysis planner. Given an analysis task and available data tools, determine ALL data sources needed in a single response.
+
+Your analysis task: {system_prompt}
+
+Target stocks: {stocks}
+
+Available standard data tools:
+{tools_description}
+
+Instructions:
+1. Consider what data is needed to fully complete the analysis task.
+2. Select ALL relevant standard tools from the list above — do not hold back, list every tool whose data would be useful.
+3. If the task requires specialized data NOT covered by any standard tool (e.g., options chains, insider trading, SEC filings, alternative data), suggest custom data agents for those needs.
+
+Respond with ONLY a JSON object (no markdown, no explanation):
+{{
+  "standard": ["tool_name_1", "tool_name_2", ...],
+  "custom": [
+    {{"name": "agent-name", "description": "what data it fetches", "data_type": "category of data"}},
+    ...
+  ],
+  "reasoning": "brief explanation of why these tools were selected"
+}}
+
+Rules:
+- "standard" must only contain names from the available tools list above
+- "custom" should be an empty array [] if standard tools are sufficient
+- Only suggest custom agents for truly exotic data needs that no standard tool covers
+- Be thorough — include ALL tools that provide relevant data for the task"""
+
+
+async def discover_required_tools(
+    system_prompt: str,
+    stocks: list[str],
+    available_tools: list[str],
+) -> dict:
+    """Single-shot discovery: one LLM call returns all needed data sources.
+
+    Returns {"standard": ["candlestick", ...], "custom": [{"name": ..., "description": ..., "data_type": ...}]}
+    """
+    tools_desc = "\n".join(
+        f"- {t}: {TOOLS_DESCRIPTION.get(t, 'Custom data tool')}" for t in available_tools
+    )
+    prompt = DISCOVER_TOOLS_PROMPT.format(
+        system_prompt=system_prompt,
+        stocks=stocks,
+        tools_description=tools_desc,
+    )
+    logger.info(
+        "discover_required_tools: stocks=%s, available_tools=%s, prompt_len=%d",
+        stocks, available_tools, len(prompt),
+    )
+
+    try:
+        response = await call_llm(prompt)
+        logger.info("discover_required_tools: raw LLM response:\n%s", response)
+        parsed = json.loads(_clean_json(response))
+
+        # Validate standard tools against available list
+        standard = [t for t in parsed.get("standard", []) if t in available_tools]
+        custom = parsed.get("custom", [])
+        if not isinstance(custom, list):
+            custom = []
+
+        logger.info(
+            "discover_required_tools: standard=%s, custom_count=%d, reasoning=%s",
+            standard, len(custom), parsed.get("reasoning", ""),
+        )
+        return {"standard": standard, "custom": custom}
+    except json.JSONDecodeError as e:
+        logger.warning("discover_required_tools: JSON parse failed: %s — raw:\n%s", e, response)
+        # Fallback: return all available tools as standard
+        return {"standard": available_tools, "custom": []}
+    except Exception as e:
+        logger.error("discover_required_tools: failed: %s", e)
+        return {"standard": available_tools, "custom": []}
+
+
 async def run_thinking_loop(
     stocks: List[str],
     system_prompt: str,
