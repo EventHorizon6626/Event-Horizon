@@ -127,6 +127,7 @@ class AnalyzerRequest(BaseModel):
     """Request model for analyzer agents (bull-bear, risk-manager, etc.)."""
     stocks: List[str]
     data: Optional[dict] = None
+    raw_data: Optional[dict] = None
 
 
 class CustomAgentRequest(BaseModel):
