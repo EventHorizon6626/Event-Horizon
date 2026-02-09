@@ -15,6 +15,7 @@ from models import (
     ThinkingAgentRequest,
 )
 from services.data_agents import STAGE1_CONFIG, execute_tool
+from services.web_search import search_for_stocks
 from services.llm import LLM_MODEL, call_llm, call_llm_full
 from services.thinking_engine import (
     TOOLS_DESCRIPTION,
@@ -95,6 +96,19 @@ async def run_fundamentals_agent(request: AgentRequest):
         return result
     except Exception as e:
         logger.error("Fundamentals agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/web-search")
+async def run_web_search_agent(request: AgentRequest):
+    """Execute Web Search agent for given stocks."""
+    try:
+        logger.info("Running Web Search agent for stocks=%s", request.stocks)
+        result = await search_for_stocks(request.stocks)
+        logger.info("Web Search agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("Web Search agent failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
