@@ -19,6 +19,8 @@ from services.web_search import search_for_stocks
 from services.llm import LLM_MODEL, call_llm, call_llm_full
 from services.thinking_engine import (
     TOOLS_DESCRIPTION,
+    discover_required_tools,
+    generate_data_agent_prompt,
     run_thinking_loop,
     think_step,
 )
@@ -131,19 +133,57 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
             request.stocks, has_data, has_raw,
         )
 
-        # ── Path A: no data at all → tell frontend to collect data first ──
+        # ── Path A: no data at all → discover needed data agents, then tell frontend ──
         if not has_data and not has_raw:
-            logger.info("Bull-Bear Analyzer: Path A — returning needs_data")
+            logger.info("Bull-Bear Analyzer: Path A — discovering required data agents")
+            bull_bear_prompt = (
+                "You are a Bull-Bear Analyzer. Conduct an internal debate: "
+                "build the strongest BULLISH case, then the strongest BEARISH counter-argument, "
+                "then synthesize both sides into a final balanced investment thesis."
+            )
+            discovery = await discover_required_tools(
+                system_prompt=bull_bear_prompt,
+                stocks=request.stocks,
+                available_tools=list(TOOLS_DESCRIPTION.keys()),
+            )
+            required_agents = []
+            for tool_name in discovery.get("standard", []):
+                required_agents.append({
+                    "name": tool_name,
+                    "type": "data",
+                    "source": "eh_pipeline",
+                    "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
+                })
+            for custom in discovery.get("custom", []):
+                prompt = await generate_data_agent_prompt(
+                    custom, request.stocks, bull_bear_prompt,
+                )
+                required_agents.append({
+                    "name": custom.get("name", "custom-data-agent"),
+                    "description": custom.get("description", ""),
+                    "type": "data",
+                    "source": "web_search",
+                    "system_prompt": prompt,
+                    "data_type": custom.get("data_type", "specialized data"),
+                })
+            # Fallback: if discovery returned nothing, use all standard tools
+            if not required_agents:
+                logger.warning("Bull-Bear Analyzer: discovery returned no tools, falling back to all standard")
+                for tool_name in TOOLS_DESCRIPTION:
+                    required_agents.append({
+                        "name": tool_name,
+                        "type": "data",
+                        "source": "eh_pipeline",
+                        "description": TOOLS_DESCRIPTION[tool_name],
+                    })
+            logger.info(
+                "Bull-Bear Analyzer: Path A — needs_data with %d agents: %s",
+                len(required_agents), [a["name"] for a in required_agents],
+            )
             return {
                 "status": "needs_data",
                 "agent": "bull_bear_analyzer",
-                "required_agents": [
-                    {"name": "candlestick", "type": "data", "source": "eh_pipeline", "description": "OHLCV price data"},
-                    {"name": "earnings", "type": "data", "source": "eh_pipeline", "description": "Financial reports and earnings"},
-                    {"name": "news", "type": "data", "source": "eh_pipeline", "description": "Recent news articles"},
-                    {"name": "technical", "type": "data", "source": "eh_pipeline", "description": "Technical indicators"},
-                    {"name": "fundamentals", "type": "data", "source": "eh_pipeline", "description": "Fundamental metrics"},
-                ],
+                "required_agents": required_agents,
             }
 
         # ── Path B: raw_data from connected data agents → process pipeline ──
@@ -268,102 +308,63 @@ async def run_custom_agent(request: CustomAgentRequest):
         available_tools = list(TOOLS_DESCRIPTION.keys())
         logger.info("Custom Agent: Path B available_tools=%s", available_tools)
 
-        loop_result = await run_thinking_loop(
-            stocks=request.stocks,
+        # ── Fetch mode: use thinking loop to actually execute tools ──
+        if is_fetch_mode:
+            loop_result = await run_thinking_loop(
+                stocks=request.stocks,
+                system_prompt=request.system_prompt,
+                max_iterations=3,
+                available_tools=available_tools,
+                discovery_only=False,
+                allow_agent_creation=False,
+            )
+            if loop_result.get("status") == "success":
+                final = loop_result.get("final_result", {})
+                analysis_text = json.dumps(final, indent=2, default=str) if isinstance(final, dict) else str(final)
+                logger.info(
+                    "=== CUSTOM AGENT COMPLETE (fetch mode) === analysis_text_len=%d",
+                    len(analysis_text),
+                )
+                return AnalysisResponse(
+                    status="success",
+                    analysis=analysis_text,
+                    model=LLM_MODEL,
+                    agent_name="custom",
+                )
+
+        # ── Discovery mode: single-shot tool discovery (one LLM call) ──
+        discovery = await discover_required_tools(
             system_prompt=request.system_prompt,
-            max_iterations=3,
+            stocks=request.stocks,
             available_tools=available_tools,
-            discovery_only=not is_fetch_mode,
-            allow_agent_creation=not is_fetch_mode,
         )
 
-        # ── Fetch mode: return tool results directly ──
-        if is_fetch_mode and loop_result.get("status") == "success":
-            final = loop_result.get("final_result", {})
-            analysis_text = json.dumps(final, indent=2, default=str) if isinstance(final, dict) else str(final)
-            logger.info(
-                "=== CUSTOM AGENT COMPLETE (fetch mode) === analysis_text_len=%d",
-                len(analysis_text),
-            )
-            return AnalysisResponse(
-                status="success",
-                analysis=analysis_text,
-                model=LLM_MODEL,
-                agent_name="custom",
-            )
-
-        loop_status = loop_result.get("status", "error")
-        tools_discovered = loop_result.get("tools_discovered", [])
-        iterations = loop_result.get("iterations_used", 0)
-        thinking_steps = loop_result.get("thinking_steps", [])
-        logger.info(
-            "Custom Agent: discovery complete — status=%s, tools_discovered=%s, iterations=%d, steps_count=%d",
-            loop_status, tools_discovered, iterations, len(thinking_steps),
-        )
-
-        # Log each thinking step
-        for i, step in enumerate(thinking_steps):
-            logger.info(
-                "Custom Agent: thinking step %d — iteration=%s, action=%s, thought=%s",
-                i, step.get("iteration"), step.get("action"), step.get("thought"),
-            )
-            if step.get("tool"):
-                logger.info("Custom Agent: thinking step %d — tool=%s", i, step.get("tool"))
-            if step.get("suggested_data_agent"):
-                logger.info("Custom Agent: thinking step %d — suggested_data_agent=%s", i, json.dumps(step["suggested_data_agent"], default=str))
-
-        # If the loop paused because it needs an exotic/custom data agent
-        if loop_status == "paused":
-            suggested = loop_result.get("suggested_data_agent", {})
-            logger.info(
-                "=== CUSTOM AGENT: NEEDS_DATA (exotic) === agent_name=%s, data_type=%s, description=%s",
-                suggested.get("name"), suggested.get("data_type"), suggested.get("description"),
-            )
-
-            # Combine any standard tools discovered before the pause with the exotic agent
-            required_agents = []
-            for tool_name in tools_discovered:
-                required_agents.append({
-                    "name": tool_name,
-                    "type": "data",
-                    "source": "eh_pipeline",
-                    "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
-                })
-            # Add the exotic/custom data agent
+        required_agents = []
+        # Standard EH pipeline agents
+        for tool_name in discovery.get("standard", []):
             required_agents.append({
-                "name": suggested.get("name", "custom-data-agent"),
-                "description": suggested.get("description", ""),
+                "name": tool_name,
+                "type": "data",
+                "source": "eh_pipeline",
+                "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
+            })
+        # Custom/exotic agents (web search based)
+        for custom in discovery.get("custom", []):
+            prompt = await generate_data_agent_prompt(
+                custom, request.stocks, request.system_prompt,
+            )
+            required_agents.append({
+                "name": custom.get("name", "custom-data-agent"),
+                "description": custom.get("description", ""),
                 "type": "data",
                 "source": "web_search",
-                "system_prompt": suggested.get("suggested_system_prompt", ""),
-                "temperature": "0.3",
-                "max_tokens": "4096",
+                "system_prompt": prompt,
+                "data_type": custom.get("data_type", "specialized data"),
             })
 
-            response = AnalysisResponse(
-                status="needs_data",
-                model=LLM_MODEL,
-                analysis=None,
-                required_agents=required_agents,
-            )
+        if required_agents:
             logger.info(
-                "Custom Agent: returning needs_data response — required_agents=%s",
-                json.dumps(response.required_agents, default=str),
-            )
-            return response
-
-        # Standard tools discovered — return needs_data with EH pipeline agents
-        if tools_discovered:
-            required_agents = []
-            for tool_name in tools_discovered:
-                required_agents.append({
-                    "name": tool_name,
-                    "type": "data",
-                    "source": "eh_pipeline",
-                    "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
-                })
-            logger.info(
-                "=== CUSTOM AGENT: NEEDS_DATA (standard) === required_agents=%s",
+                "=== CUSTOM AGENT: NEEDS_DATA (single-shot) === required_agents=%s",
                 json.dumps(required_agents, default=str),
             )
             return AnalysisResponse(
@@ -372,8 +373,7 @@ async def run_custom_agent(request: CustomAgentRequest):
                 required_agents=required_agents,
             )
 
-        # No tools discovered (LLM said generate_response without needing tools)
-        # Fall through to generate a response directly
+        # No tools needed — fall through to direct response generation
         logger.info("Custom Agent: Path B — no tools discovered, generating response directly")
         loop_result = await run_thinking_loop(
             stocks=request.stocks,
