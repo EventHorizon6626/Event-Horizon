@@ -102,30 +102,74 @@ async def run_fundamentals_agent(request: AgentRequest):
 
 @router.post("/bull-bear-analyzer")
 async def run_bull_bear_analyzer(request: AnalyzerRequest):
-    """Run the Bull-Bear coupled analyzer that performs internal debate."""
+    """Run the Bull-Bear coupled analyzer that performs internal debate.
+
+    Three paths:
+      A) No data and no raw_data → return needs_data with required agents list
+      B) raw_data provided → process through Stage 1→2→3, then run debate
+      C) data provided → existing behaviour (pre-processed SymbolFeatures)
+    """
     try:
+        has_data = request.data and len(request.data) > 0
+        has_raw = request.raw_data and len(request.raw_data) > 0
+        logger.info(
+            "Bull-Bear Analyzer: stocks=%s, has_data=%s, has_raw_data=%s",
+            request.stocks, has_data, has_raw,
+        )
+
+        # ── Path A: no data at all → tell frontend to collect data first ──
+        if not has_data and not has_raw:
+            logger.info("Bull-Bear Analyzer: Path A — returning needs_data")
+            return {
+                "status": "needs_data",
+                "agent": "bull_bear_analyzer",
+                "required_agents": [
+                    {"name": "candlestick", "type": "data", "source": "eh_pipeline", "description": "OHLCV price data"},
+                    {"name": "earnings", "type": "data", "source": "eh_pipeline", "description": "Financial reports and earnings"},
+                    {"name": "news", "type": "data", "source": "eh_pipeline", "description": "Recent news articles"},
+                    {"name": "technical", "type": "data", "source": "eh_pipeline", "description": "Technical indicators"},
+                    {"name": "fundamentals", "type": "data", "source": "eh_pipeline", "description": "Fundamental metrics"},
+                ],
+            }
+
+        # ── Path B: raw_data from connected data agents → process pipeline ──
+        if has_raw:
+            logger.info("Bull-Bear Analyzer: Path B — processing raw_data through pipeline")
+            from services.data_processing import process_raw_to_features
+
+            symbol_features = process_raw_to_features(request.stocks, request.raw_data)
+            logger.info("Bull-Bear Analyzer: Path B — got %d symbol features", len(symbol_features))
+        else:
+            # ── Path C: pre-processed SymbolFeatures in data ──
+            logger.info("Bull-Bear Analyzer: Path C — using pre-processed data")
+            import dataclasses
+
+            from event_horizon.data_pipeline.stage_3.models.schemas import SymbolFeatures
+
+            raw_features = request.data or {}
+            valid_fields = {f.name for f in dataclasses.fields(SymbolFeatures)}
+            symbol_features = {}
+            for sym, feat in raw_features.items():
+                if isinstance(feat, dict):
+                    filtered = {k: v for k, v in feat.items() if k in valid_fields}
+                    filtered["symbol"] = sym
+                    symbol_features[sym] = SymbolFeatures(**filtered)
+                else:
+                    symbol_features[sym] = feat
+
+        # Run the debate with the resolved symbol_features
         import asyncio
 
         from event_horizon.analyzer_system import BullBearAnalyzer
-        from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output, SymbolFeatures
+        from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
 
-        logger.info("Bull-Bear Analyzer: starting for stocks=%s", request.stocks)
         analyzer = BullBearAnalyzer(
-            config={"llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"), "temperature": 0.7, "enable_opik": False}
+            config={
+                "llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"),
+                "temperature": 0.7,
+                "enable_opik": False,
+            }
         )
-        # Convert raw dicts to SymbolFeatures objects
-        import dataclasses
-        raw_features = request.data or {}
-        logger.info("Bull-Bear Analyzer: converting %d symbol features from raw dicts", len(raw_features))
-        valid_fields = {f.name for f in dataclasses.fields(SymbolFeatures)}
-        symbol_features = {}
-        for sym, feat in raw_features.items():
-            if isinstance(feat, dict):
-                filtered = {k: v for k, v in feat.items() if k in valid_fields}
-                filtered["symbol"] = sym
-                symbol_features[sym] = SymbolFeatures(**filtered)
-            else:
-                symbol_features[sym] = feat
         stage3_data = Stage3Output(
             portfolio_id=f"portfolio_{'-'.join(request.stocks)}",
             symbols=request.stocks,
@@ -135,7 +179,7 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
         logger.info("Bull-Bear Analyzer: complete for stocks=%s", request.stocks)
         return {"status": "success", "agent": "bull_bear_analyzer", "result": result}
     except Exception as e:
-        logger.error("Bull-Bear Analyzer failed: %s", e)
+        logger.error("Bull-Bear Analyzer failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

@@ -16,7 +16,7 @@ TOOLS_DESCRIPTION = {
     "news": "Recent news articles, headlines, and press releases about the stocks",
     "technical": "Technical indicators including RSI, MACD, SMA, EMA, Bollinger Bands",
     "fundamentals": "Fundamental metrics like P/E ratio, P/B ratio, EPS, dividend yield, market cap",
-    "web_search": "Web search for general information: company history, background, industry context, non-market data",
+    "web_search": "Web search for any topic: sentiment, analyst ratings, industry context, company background, etc. Specify the topic in your reasoning.",
 }
 
 THINK_PROMPT_BASE = """You are an intelligent financial analysis agent with access to data tools.
@@ -31,11 +31,12 @@ Current context:
 - Data already collected: {collected_data_summary}
 
 IMPORTANT: Do NOT request a tool that is already listed in 'Data already collected'. Pick a DIFFERENT tool or generate your response.
+IMPORTANT: If NONE of the available tools can provide the specific data your task requires, use generate_response immediately — do NOT call irrelevant tools hoping they might help.
 
 Decide your next action. You must respond in JSON only (no markdown, no explanation):
 
 Option 1 - Need more data (pick a tool from the available list above):
-{{"action": "call_tool", "tool": "tool_name", "reasoning": "why I need this data"}}
+{{"action": "call_tool", "tool": "tool_name", "search_topic": "topic keywords for web_search (only needed for web_search tool)", "reasoning": "why I need this data"}}
 """
 
 THINK_PROMPT_CREATE_AGENT = """
@@ -415,7 +416,13 @@ async def run_thinking_loop(
                 })
             else:
                 logger.info("Iteration %d: executing tool '%s' for stocks=%s", iteration, tool_name, stocks)
-                tool_result = await execute_tool(tool_name, stocks)
+                # For web_search, use search_topic from LLM or fall back to reasoning
+                overrides = {}
+                if tool_name == "web_search":
+                    search_topic = thought.get("search_topic") or reasoning or ""
+                    if search_topic:
+                        overrides["topic"] = search_topic[:200]
+                tool_result = await execute_tool(tool_name, stocks, **overrides)
                 context["data"][tool_name] = tool_result
                 tools_used.append(tool_name)
 

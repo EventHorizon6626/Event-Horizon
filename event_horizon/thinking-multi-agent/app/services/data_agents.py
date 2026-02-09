@@ -66,7 +66,7 @@ async def execute_tool(tool_name: str, stocks: List[str], **overrides) -> dict:
         if tool_name == "web_search":
             from services.web_search import search_for_stocks
 
-            topic = overrides.get("topic", "company history background")
+            topic = overrides.get("topic", "financial analysis")
             logger.info("Executing web_search: stocks=%s, topic=%s", stocks, topic)
             result = await search_for_stocks(stocks, topic)
         else:
