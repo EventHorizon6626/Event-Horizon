@@ -7,16 +7,16 @@ The Thinking Agent system implements a ReAct-style (Reasoning + Acting) iterativ
 ## Architecture
 
 ```
-Portfolio → Thinking Agent → [Iteration Loop] → Final Output
-                ↓
-           ┌────────────────────────────────────────┐
-           │  1. Analyze input (portfolio or data)  │
-           │  2. Decide: Need more data?            │
-           │     → Yes: Select/create data agent    │
-           │     → No: Generate analysis            │
-           │  3. Evaluate quality                   │
-           │  4. Refine if needed (max N iterations)│
-           └────────────────────────────────────────┘
+Portfolio -> Thinking Agent -> [Iteration Loop] -> Final Output
+                |
+           +--------------------------------------------+
+           |  1. Analyze input (portfolio or data)       |
+           |  2. Decide: Need more data?                 |
+           |     -> Yes: Select/create data agent        |
+           |     -> No: Generate analysis                |
+           |  3. Evaluate quality                        |
+           |  4. Refine if needed (max N iterations)     |
+           +--------------------------------------------+
 ```
 
 ## API Endpoint
@@ -33,7 +33,7 @@ Execute a thinking agent with iterative ReAct-style reasoning loop.
   "input_data": { ... },
   "system_prompt": "You are a dividend-focused analyst...",
   "max_iterations": 5,
-  "available_tools": ["candlestick", "earnings", "news", "technical", "fundamentals"]
+  "available_tools": ["candlestick", "earnings", "news", "technical", "fundamentals", "web_search"]
 }
 ```
 
@@ -112,8 +112,28 @@ When the thinking agent needs data that built-in tools don't provide:
 | `candlestick` | OHLCV price data | Open, High, Low, Close, Volume per day |
 | `earnings` | Financial reports | Quarterly earnings, EPS history, revenue |
 | `news` | Recent news articles | Headlines, summaries, sentiment |
-| `technical` | Technical indicators | RSI, MACD, SMA, EMA, Bollinger Bands |
+| `technical` | Technical indicators | RSI, MACD, SMA, EMA |
 | `fundamentals` | Fundamental metrics | P/E, P/B, EPS, dividend yield, market cap |
+| `web_search` | Web search (Tavily/Exa) | Search results, answers, URLs |
+
+## Single-Shot Tool Discovery
+
+The thinking engine includes `discover_required_tools()` -- a single LLM call that identifies all tools needed for a task upfront, without executing them. This is used by:
+
+- The **bull-bear analyzer** endpoint (Path A) to tell the frontend what data agents to run
+- The **custom agent** endpoint in discovery mode
+
+```python
+# Returns a list of required tool names in one LLM call
+required_tools = await discover_required_tools(system_prompt, stocks, available_tools)
+# e.g. ["candlestick", "earnings", "fundamentals"]
+```
+
+## Custom/Exotic Data Agent Creation
+
+When the thinking agent encounters a need for data that built-in tools don't cover, it can request creation of a custom data agent. Custom data agents are **scoped to the `web_search` tool only** -- they use Tavily/Exa to retrieve specialized information.
+
+The `generate_data_agent_prompt()` function uses LLM meta-prompting to create rich system prompts for these agents. If the LLM call fails, it falls back to an enhanced template.
 
 ## Think Step Prompt
 
@@ -127,6 +147,7 @@ Your task: {system_prompt}
 Available data tools:
 - candlestick: OHLCV price data...
 - earnings: Financial reports...
+- web_search: Web search results...
 ...
 
 Current context:
@@ -149,14 +170,19 @@ Option 3 - Ready to answer (have sufficient data):
 
 ### Core Functions
 
+Located in `event_horizon/thinking-multi-agent/app/services/thinking_engine.py`:
+
 #### `think_step(system_prompt, context, available_tools)`
 Asks the LLM what action to take next based on current context and available tools.
 
 #### `execute_tool(tool_name, stocks)`
-Executes a built-in data tool and returns results.
+Executes a built-in data tool and returns results. Also handles `web_search`.
 
-#### `generate_final_response(system_prompt, context)`
-Generates the final analysis response using all collected data.
+#### `run_thinking_loop(system_prompt, stocks, ...)`
+Full ReAct loop with max_iterations, tool execution, data accumulation.
+
+#### `discover_required_tools(system_prompt, stocks, available_tools)`
+Single-shot LLM call to discover all needed tools at once without executing them.
 
 #### `generate_data_agent_prompt(thought, stocks, analyzer_task)` *(async)*
 Generates a rich system prompt for a custom data agent via LLM meta-prompting. Falls back to an enhanced template if the LLM call fails.
@@ -166,10 +192,11 @@ Generates a rich system prompt for a custom data agent via LLM meta-prompting. F
 1. **Initialize**: Set up context with stocks and any input data
 2. **Think**: Ask LLM what action to take
 3. **Act**: Execute the chosen action
-   - `call_tool`: Run the tool, add results to context
-   - `create_data_agent`: Pause and return suggestion
+   - `call_tool`: Run the tool, add results to context. Tool is removed from available list.
+   - `create_data_agent`: Pause and return suggestion (agent scoped to web_search only)
    - `generate_response`: Generate final analysis
-4. **Loop**: Repeat until max iterations or response generated
+4. **Guard**: Consecutive-skip guard breaks after 2 repeats of same tool
+5. **Loop**: Repeat until max iterations or response generated
 
 ## Example Usage
 
@@ -182,7 +209,7 @@ response = requests.post("http://localhost:8030/agents/think", json={
     "stocks": ["AAPL", "MSFT"],
     "system_prompt": "You are a dividend-focused analyst. Find stocks with sustainable high dividends.",
     "max_iterations": 5,
-    "available_tools": ["fundamentals", "earnings", "candlestick"]
+    "available_tools": ["fundamentals", "earnings", "candlestick", "web_search"]
 })
 
 result = response.json()
@@ -217,8 +244,12 @@ Environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GOOGLE_API_KEY` | - | Required for Gemini LLM calls |
-| `DEFAULT_DEEP_THINK_MODEL` | `gemini-1.5-pro` | Model for thinking/analysis |
+| `LLM_BASE_URL` | `http://localhost:8000` | OpenAI-compatible LLM endpoint (e.g. vLLM) |
+| `LLM_MODEL` | `mistralai/Ministral-3-14B-Reasoning-2512` | Model for thinking/analysis |
+| `LLM_API_KEY` | `""` | API key if required |
+| `LLM_TIMEOUT` | `300` | HTTP timeout in seconds |
+| `TAVILY_API_KEY` | - | Required for web_search tool |
+| `EXASEARCH_API_KEY` | - | Fallback for web_search (Exa) |
 
 ## See Also
 

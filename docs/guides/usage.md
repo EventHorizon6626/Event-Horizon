@@ -1,382 +1,297 @@
 # Event Horizon - Usage Guide
 
-## Simple: Just One main.py
+## Overview
 
-There is **only one** `main.py` file. It works in two modes automatically.
-
----
-
-## Mode 1: With config.yaml (Automated)
-
-**Best for**: Deployment, automation, Docker, cron jobs
-
-### Setup:
-```bash
-# 1. Edit config.yaml
-vim config.yaml
-```
-
-```yaml
-agents:
-  news_agent:
-    enabled: false  # ← Turn off
-
-  report_agent:
-    enabled: true   # ← Turn on
-```
-
-### Run:
-```bash
-python main.py
-```
-
-### Output:
-```
-======================================================================
- AGENT CONFIGURATION STATUS
-======================================================================
-news_agent          : ❌ DISABLED
-report_agent        : ✅ ENABLED
-
-Enabled Agents: report_agent
-======================================================================
-
-🤖 EXECUTING REPORT AGENT
-...
-✅ Agents executed successfully!
-📊 report_results.json
-```
-
-**No interaction needed!** Perfect for automation.
+Event Horizon runs as a **FastAPI application** (v3.0.0) serving a multi-agent trading analysis system. The primary entry point is the FastAPI app on port 8030, which provides 20+ REST endpoints for data retrieval, analysis, agent management, and more.
 
 ---
 
-## Mode 2: Without config.yaml (Interactive)
+## Quick Start
 
-**Best for**: Testing, exploration, manual runs
+### 1. Configure Environment
 
-### Run:
 ```bash
-# If config.yaml doesn't exist, you get a menu
-python main.py
+cd event_horizon/thinking-multi-agent
+cp .env.example .env
+nano .env
 ```
 
-### Output:
-```
-======================================================================
- EVENT HORIZON - MULTI-AGENT SYSTEM
-======================================================================
-⚠️  config.yaml not found. Running in interactive mode.
-
-💡 Tip: Create config.yaml for automated deployment
-
-Select agents to execute:
-  1. News Agent only
-  2. Report Agent only
-  3. Both agents
-======================================================================
-
-Enter choice (1-3) [default: 3]:
+Set the required variables:
+```bash
+LLM_BASE_URL=http://localhost:8000       # Your vLLM or OpenAI-compatible endpoint
+LLM_MODEL=mistralai/Ministral-3-14B-Reasoning-2512
+TAVILY_API_KEY=your_tavily_key           # For news/web search
+AGENTS_FILE=/tmp/agents.json             # Writable path for agent persistence
 ```
 
-You choose which agents to run **interactively**.
+### 2. Install Dependencies
+
+```bash
+pip install -r app/requirements.txt
+```
+
+### 3. Start the App
+
+```bash
+# Using the start script
+bash start.sh
+
+# Or directly
+cd app && uvicorn main:app --host 0.0.0.0 --port 8030
+```
+
+### 4. Verify
+
+```bash
+curl http://localhost:8030/health
+```
+
+Interactive API docs: `http://localhost:8030/docs`
 
 ---
 
-## Quick Commands
+## API Endpoints
 
-### Current Setup (Your Request)
+### Health & Info
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Root - service info, model, agent count
+curl http://localhost:8030/
 
-# Run (with config.yaml already set to Report Agent only)
-python main.py
+# Health check - includes LLM backend status
+curl http://localhost:8030/health
+
+# List available LLM models
+curl http://localhost:8030/models
 ```
 
-That's it! You get `report_results.json` with earnings and fund data.
+### Data Agents (Stage 1)
 
----
+Each data agent retrieves a specific type of market data:
 
-## Switching Between Modes
-
-### To use Automated Mode:
 ```bash
-# Make sure config.yaml exists
-ls config.yaml
+# OHLCV price data
+curl -X POST http://localhost:8030/agents/candlestick \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL", "TSLA"], "period": "1mo", "timeframe": "1d"}'
 
-# Run
-python main.py
+# Earnings and financial reports
+curl -X POST http://localhost:8030/agents/earnings \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"]}'
+
+# News articles (via Tavily/Exa)
+curl -X POST http://localhost:8030/agents/news \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"], "days": 7}'
+
+# Technical indicators (SMA, RSI, MACD)
+curl -X POST http://localhost:8030/agents/technical \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"], "indicators": ["SMA", "RSI", "MACD"]}'
+
+# Fundamental metrics
+curl -X POST http://localhost:8030/agents/fundamentals \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"]}'
+
+# Web search
+curl -X POST http://localhost:8030/agents/web-search \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"]}'
 ```
 
-### To use Interactive Mode:
+### Full Pipeline
+
 ```bash
-# Temporarily rename config.yaml
-mv config.yaml config.yaml.backup
+# Run Stage 1 on a portfolio (all 5 agents in parallel)
+curl -X POST http://localhost:8030/api/v1/analyze-portfolio \
+  -H "Content-Type: application/json" \
+  -d '{"portfolio": ["AAPL", "TSLA", "NVDA"]}'
 
-# Run (will show menu)
-python main.py
-
-# Restore config
-mv config.yaml.backup config.yaml
+# List supported agent types and their config options
+curl http://localhost:8030/api/v1/supported-agents
 ```
 
----
+### Bull-Bear Analyzer
 
-## What Changed?
+```bash
+# Run bull-bear debate analysis
+curl -X POST http://localhost:8030/agents/bull-bear-analyzer \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"]}'
+```
 
-### Before (Confusing):
-- ❌ `main.py` - Old version with manual menu
-- ❌ `main_v2.py` - New version with config
-- ❌ User confused: "Which one do I use?"
+The bull-bear endpoint supports 3 modes:
+- **No data**: Returns `needs_data` with required agent suggestions
+- **With `raw_data`**: Processes through Stage 1->2->3 pipeline, then debates
+- **With `data`**: Runs debate directly on pre-processed SymbolFeatures
 
-### Now (Simple):
-- ✅ `main.py` - **ONE FILE**, works both ways
-  - Has config.yaml → Automated mode
-  - No config.yaml → Interactive mode
+### Thinking Agent
+
+```bash
+# ReAct-style iterative reasoning
+curl -X POST http://localhost:8030/agents/think \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stocks": ["AAPL", "MSFT"],
+    "system_prompt": "You are a dividend-focused analyst. Find stocks with sustainable high dividends.",
+    "max_iterations": 5,
+    "available_tools": ["fundamentals", "earnings", "candlestick", "web_search"]
+  }'
+```
+
+### Agent Management (CRUD)
+
+```bash
+# List all agents (built-in + user-created)
+curl http://localhost:8030/agents
+
+# Get agent details
+curl http://localhost:8030/agents/{agent_id}
+
+# Create a custom agent
+curl -X POST http://localhost:8030/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "momentum-scanner",
+    "description": "Scans for momentum trading opportunities",
+    "type": "analysis",
+    "system_prompt": "You are a momentum trading analyst..."
+  }'
+
+# Delete an agent (only user-created agents can be deleted)
+curl -X DELETE http://localhost:8030/agents/{agent_id}
+
+# Run analysis through any agent
+curl -X POST http://localhost:8030/agents/{agent_id}/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Analyze AAPL for momentum signals", "stocks": ["AAPL"]}'
+```
+
+### General Analysis
+
+```bash
+# Default financial analysis
+curl -X POST http://localhost:8030/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Analyze these stocks", "stocks": ["AAPL", "TSLA"]}'
+
+# Streaming analysis (SSE)
+curl -X POST http://localhost:8030/analyze/stream \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Analyze AAPL"}'
+```
+
+### Utilities
+
+```bash
+# Generate a system prompt for a custom agent
+curl -X POST http://localhost:8030/agents/generate-agent-system-prompt \
+  -H "Content-Type: application/json" \
+  -d '{"name": "ESG Analyst", "description": "Analyzes ESG factors", "category": "analysis"}'
+
+# Execute a custom agent with specific tools
+curl -X POST http://localhost:8030/agents/custom \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stocks": ["AAPL"],
+    "system_prompt": "You analyze options flow...",
+    "execution_mode": "fetch",
+    "available_tools": ["web_search"]
+  }'
+```
 
 ---
 
 ## File Structure
 
 ```
-Event-Horizon/
-├── main.py              # ← Just run this
-├── config.yaml          # ← Optional: For automated mode
-├── .env                 # ← Optional: API keys
-│
-├── agents/              # Agent implementations
-│   ├── news_agent.py
-│   └── report_agent.py
-│
-├── services/            # Data clients
-│   ├── news_api_client.py
-│   └── financial_data_client.py
-│
-└── utils/               # Configuration loader
-    └── config_loader.py
+event_horizon/
+|-- thinking-multi-agent/
+|   |-- .env                   # Environment configuration
+|   |-- .env.example           # Template
+|   |-- start.sh               # Startup script
+|   +-- app/
+|       |-- main.py            # FastAPI entry point
+|       |-- models.py          # Pydantic request/response models
+|       |-- agents.py          # AgentStore (CRUD + JSON persistence)
+|       |-- seed.py            # Built-in agent definitions
+|       |-- prompts.py         # System/user prompt builders
+|       |-- routers/           # Route modules
+|       +-- services/          # LLM, data agents, thinking engine, web search
+|
+|-- data_pipeline/
+|   |-- stage_1/               # Data Retrieval (5 agents)
+|   |-- stage_2/               # Normalization
+|   +-- stage_3/               # LLM Feature Extraction
+|
+|-- analyzer_system/
+|   +-- bull_bear_analyzer/    # 3-agent debate system
+|
++-- core/
+    +-- base/                  # BaseAgent, BaseOrchestrator
 ```
 
 ---
 
-## Configuration Reference
+## Built-in Agents
 
-### Enable/Disable Agents
+The app seeds these built-in agents on startup (not deletable):
 
-Edit `config.yaml`:
-
-```yaml
-agents:
-  news_agent:
-    enabled: false  # false = OFF, true = ON
-
-  report_agent:
-    enabled: true   # false = OFF, true = ON
-```
-
-### Configure Agent Behavior
-
-```yaml
-agents:
-  news_agent:
-    enabled: true
-    config:
-      max_articles_per_stock: 5   # How many articles
-      days_back: 7                # How far back
-      language: "en"              # Language
-
-  report_agent:
-    enabled: true
-    config:
-      include_financials: true    # Include financial statements
-      earnings_periods: 4         # Quarters to retrieve
-      top_holdings: 10           # Holdings to show
-```
+| Agent | Type | Description |
+|-------|------|-------------|
+| `candlestick` | data | OHLCV price data |
+| `earnings` | data | Financial reports |
+| `news` | data | News articles (Tavily/Exa) |
+| `bull-bear-analyzer` | analysis | Bull-bear debate system |
+| `risk-manager` | analysis | Risk assessment (prompt-based) |
 
 ---
 
-## Examples
+## Environment Variables
 
-### Example 1: Only Report Agent (Your Request)
-
-**config.yaml**:
-```yaml
-agents:
-  news_agent:
-    enabled: false
-
-  report_agent:
-    enabled: true
-```
-
-**Command**:
-```bash
-python main.py
-```
-
-**Result**: Only `report_results.json` is created
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `LLM_BASE_URL` | Yes | `http://localhost:8000` | OpenAI-compatible LLM endpoint |
+| `LLM_MODEL` | Yes | `mistralai/Ministral-3-14B-Reasoning-2512` | Model ID |
+| `LLM_API_KEY` | No | `""` | LLM API key |
+| `LLM_TIMEOUT` | No | `300` | HTTP timeout (seconds) |
+| `AGENTS_FILE` | No | `/data/agents.json` | Agent persistence path |
+| `TAVILY_API_KEY` | For news/search | - | Tavily search API key |
+| `EXASEARCH_API_KEY` | No | - | Exa search (fallback) |
+| `LOG_LEVEL` | No | `info` | Logging level |
 
 ---
 
-### Example 2: Only News Agent
-
-**config.yaml**:
-```yaml
-agents:
-  news_agent:
-    enabled: true
-
-  report_agent:
-    enabled: false
-```
-
-**Command**:
-```bash
-python main.py
-```
-
-**Result**: Only `news_results.json` is created (requires NEWS_API_KEY)
-
----
-
-### Example 3: Both Agents
-
-**config.yaml**:
-```yaml
-agents:
-  news_agent:
-    enabled: true
-
-  report_agent:
-    enabled: true
-```
-
-**Command**:
-```bash
-python main.py
-```
-
-**Result**: Both `news_results.json` and `report_results.json` are created
-
----
-
-### Example 4: Interactive Testing
-
-**Command**:
-```bash
-# Remove config.yaml temporarily
-mv config.yaml config.yaml.backup
-
-# Run interactively
-python main.py
-
-# You'll get a menu to choose agents
-```
-
----
-
-## Deployment
-
-### Local Development
+## Docker Deployment
 
 ```bash
-# Edit config for what you need
-vim config.yaml
+cd event_horizon/thinking-multi-agent
+docker-compose up -d --build
 
-# Run
-python main.py
+# Verify
+curl http://localhost:8030/health
 ```
 
-### Docker
-
-```dockerfile
-FROM python:3.9
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . /app
-WORKDIR /app
-
-# Copy your production config
-COPY config.prod.yaml config.yaml
-
-CMD ["python", "main.py"]
-```
-
-### Kubernetes / Cloud
-
-```bash
-# Build image with config
-docker build -t event-horizon:v1 .
-
-# Deploy (no interaction needed, uses config.yaml)
-kubectl apply -f deployment.yaml
-```
-
-### Cron Job
-
-```bash
-# Daily at 9 AM
-0 9 * * * cd /app/event-horizon && python main.py >> logs/daily.log 2>&1
-```
+See [Docker Deploy Guide](./docker-deploy.md) for details.
 
 ---
 
 ## Troubleshooting
 
-### "config.yaml not found" but I want automated mode
+### App won't start
+- Check that `AGENTS_FILE` points to a writable path
+- Ensure LLM backend is reachable at `LLM_BASE_URL`
 
-**Solution**: Create config.yaml
-```bash
-cp config.yaml.example config.yaml
-vim config.yaml
-```
+### LLM calls fail
+- Verify `LLM_BASE_URL` is correct and the vLLM server is running
+- Check `curl http://localhost:8000/v1/models` to see available models
 
-### Interactive menu appears but I don't want it
+### News agent returns no results
+- Ensure `TAVILY_API_KEY` is set
+- The Exa fallback requires `EXASEARCH_API_KEY`
 
-**Solution**: Make sure config.yaml exists
-```bash
-ls config.yaml  # Should show the file
-```
-
-### Agent not running
-
-**Solution**: Check config.yaml
-```bash
-cat config.yaml
-
-# Make sure agent is enabled:
-#   enabled: true  ← Not false
-```
-
-### "pyyaml not installed"
-
-**Solution**: Install dependencies
-```bash
-pip install pyyaml
-# or
-pip install -r requirements.txt
-```
-
----
-
-## Summary
-
-**One file**: `main.py`
-
-**Two modes**:
-1. **With config.yaml**: Automated (for deployment)
-2. **Without config.yaml**: Interactive (for testing)
-
-**Current setup** (as you requested):
-- News Agent: **OFF**
-- Report Agent: **ON**
-
-**Run**:
-```bash
-python main.py
-```
-
-**Done!** 🎉
+### Port 8030 already in use
+- Check what's using it: `sudo lsof -i :8030`
+- Use a different port: `uvicorn app.main:app --port 8031`

@@ -7,35 +7,44 @@ This guide shows how to integrate the AI service with your existing Node.js back
 ## Architecture (Option 2 - Recommended)
 
 ```
-┌─────────────────────┐
-│  Frontend (Local)   │
-│  localhost:3021     │
-└──────────┬──────────┘
-           │
-           │ HTTPS
-           ▼
-┌───────────────────────────────┐
-│   Backend API (VPS)           │
-│   evth-api.hirodev.space      │
-│   (Node.js/Express + PM2)     │
-└───────────┬───────────────────┘
-            │
-            │ HTTP (localhost only)
-            ▼
-┌───────────────────────────────┐
-│   AI Service (Same VPS)       │
-│   localhost:5000              │
-│   (Python/FastAPI)            │
-│                               │
-│   ├─ NewsAgent                │
-│   ├─ ReportAgent              │
-│   └─ Future agents            │
-└───────────────────────────────┘
++---------------------+
+|  Frontend (Local)   |
+|  localhost:3021     |
++----------+----------+
+           |
+           | HTTPS
+           v
++-------------------------------+
+|   Backend API (VPS)           |
+|   evth-api.hirodev.space      |
+|   (Node.js/Express + PM2)     |
++-----------+-------------------+
+            |
+            | HTTP (localhost only)
+            v
++-------------------------------+
+|   AI Service (Same VPS)       |
+|   localhost:8030              |
+|   (Python/FastAPI v3.0.0)     |
+|                               |
+|   Data Pipeline:              |
+|   -- Stage 1 (5 data agents) |
+|   -- Stage 2 (normalizer)    |
+|   -- Stage 3 (LLM extractor) |
+|                               |
+|   Analyzer System:            |
+|   -- Bull-Bear Analyzer       |
+|                               |
+|   Services:                   |
+|   -- Thinking engine          |
+|   -- Web search (Tavily/Exa) |
+|   -- Agent CRUD               |
++-------------------------------+
 ```
 
 **Key Points:**
 - Frontend only knows about Backend API (evth-api.hirodev.space)
-- Backend proxies requests to AI service on localhost:5000
+- Backend proxies requests to AI service on localhost:8030
 - AI service NOT exposed to internet (more secure)
 - Single entry point for all API calls
 
@@ -43,41 +52,33 @@ This guide shows how to integrate the AI service with your existing Node.js back
 
 ## Step 1: Update AI Service Configuration
 
-The AI service should bind to `localhost` only (not `0.0.0.0`) for security.
+The AI service binds to `localhost` only (not `0.0.0.0`) for security.
 
 ### Update `.env` on VPS:
 
 ```bash
-# /var/www/event-horizon-ai/.env
-NEWS_API_KEY=your_actual_key_here
-LOG_LEVEL=INFO
-
-# Bind to localhost only (not exposed to internet)
-API_HOST=127.0.0.1
-API_PORT=5000
-```
-
-### Restart AI service:
-
-```bash
-sudo systemctl restart event-horizon-ai
+# /var/www/event-horizon-ai/event_horizon/thinking-multi-agent/.env
+LLM_BASE_URL=http://localhost:8000
+LLM_MODEL=mistralai/Ministral-3-14B-Reasoning-2512
+LLM_API_KEY=
+TAVILY_API_KEY=your_tavily_key
+AGENTS_FILE=/data/agents.json
+LOG_LEVEL=info
 ```
 
 ### Test locally on VPS:
 
 ```bash
 # Should work (from VPS)
-curl http://localhost:5000/health
+curl http://localhost:8030/health
 
 # Should NOT work (from outside)
-curl http://178.18.255.19:5000/health  # Connection refused
+curl http://178.18.255.19:8030/health  # Connection refused
 ```
 
 ---
 
 ## Step 2: Add Proxy Routes to Node.js Backend
-
-In your Node.js backend repository, add these routes.
 
 ### Install Dependencies
 
@@ -96,358 +97,114 @@ const axios = require('axios');
 const router = express.Router();
 
 // AI Service configuration
-const AI_SERVICE_URL = 'http://localhost:5000';
-const AI_TIMEOUT = 60000; // 60 seconds for AI processing
+const AI_SERVICE_URL = 'http://localhost:8030';
+const AI_TIMEOUT = 120000; // 2 minutes for pipeline processing
 
-// Create axios instance with default config
 const aiClient = axios.create({
   baseURL: AI_SERVICE_URL,
   timeout: AI_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  headers: { 'Content-Type': 'application/json' }
 });
 
-/**
- * Health check for AI service
- * GET /api/ai/health
- */
+// Health check
 router.get('/health', async (req, res) => {
   try {
     const response = await aiClient.get('/health');
-    res.json({
-      backend: 'healthy',
-      ai_service: response.data
-    });
+    res.json({ backend: 'healthy', ai_service: response.data });
   } catch (error) {
-    console.error('AI health check failed:', error.message);
-    res.status(503).json({
-      backend: 'healthy',
-      ai_service: 'unavailable',
-      error: error.message
-    });
+    res.status(503).json({ backend: 'healthy', ai_service: 'unavailable', error: error.message });
   }
 });
 
-/**
- * Full Portfolio Analysis (News + Reports)
- * POST /api/ai/portfolio/analyze
- *
- * Body: {
- *   stocks: ["AAPL", "GOOGL", "TSLA"]
- * }
- */
+// Portfolio analysis (Stage 1 pipeline)
 router.post('/portfolio/analyze', async (req, res) => {
   try {
-    const { stocks } = req.body;
-
-    // Validate input
-    if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request. Provide an array of stock symbols.'
-      });
-    }
-
-    console.log(`[AI Proxy] Analyzing portfolio: ${stocks.join(', ')}`);
-
-    // Forward request to AI service
-    const response = await aiClient.post('/api/portfolio/analyze', {
-      stocks: stocks
-    });
-
+    const response = await aiClient.post('/api/v1/analyze-portfolio', req.body);
     res.json(response.data);
-
   } catch (error) {
-    console.error('[AI Proxy] Portfolio analysis failed:', error.message);
-
-    if (error.response) {
-      // AI service returned an error
-      res.status(error.response.status).json(error.response.data);
-    } else if (error.code === 'ECONNREFUSED') {
-      // AI service is down
-      res.status(503).json({
-        success: false,
-        error: 'AI service is temporarily unavailable'
-      });
-    } else {
-      // Other errors
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
-    }
+    handleProxyError(res, error, 'Portfolio analysis');
   }
 });
 
-/**
- * Get News Only
- * POST /api/ai/news
- *
- * Body: {
- *   stocks: ["AAPL", "GOOGL"]
- * }
- */
-router.post('/news', async (req, res) => {
-  try {
-    const { stocks } = req.body;
+// Generic proxy for named agent endpoints
+const agentEndpoints = [
+  'candlestick', 'earnings', 'news', 'technical', 'fundamentals',
+  'web-search', 'bull-bear-analyzer', 'custom', 'think'
+];
 
-    if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request. Provide an array of stock symbols.'
-      });
+agentEndpoints.forEach(endpoint => {
+  router.post(`/agents/${endpoint}`, async (req, res) => {
+    try {
+      const timeout = endpoint === 'think' ? 180000 : AI_TIMEOUT; // 3 min for thinking
+      const response = await aiClient.post(`/agents/${endpoint}`, req.body, { timeout });
+      res.json(response.data);
+    } catch (error) {
+      handleProxyError(res, error, `Agent ${endpoint}`);
     }
-
-    console.log(`[AI Proxy] Fetching news for: ${stocks.join(', ')}`);
-
-    const response = await aiClient.post('/api/news', { stocks });
-    res.json(response.data);
-
-  } catch (error) {
-    console.error('[AI Proxy] News fetch failed:', error.message);
-
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch news'
-      });
-    }
-  }
+  });
 });
 
-/**
- * Get Financial Reports Only
- * POST /api/ai/reports
- *
- * Body: {
- *   stocks: ["AAPL", "GOOGL"]
- * }
- */
-router.post('/reports', async (req, res) => {
-  try {
-    const { stocks } = req.body;
-
-    if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request. Provide an array of stock symbols.'
-      });
-    }
-
-    console.log(`[AI Proxy] Fetching reports for: ${stocks.join(', ')}`);
-
-    const response = await aiClient.post('/api/reports', { stocks });
-    res.json(response.data);
-
-  } catch (error) {
-    console.error('[AI Proxy] Reports fetch failed:', error.message);
-
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch reports'
-      });
-    }
-  }
+// Agent CRUD
+router.post('/agents', async (req, res) => {
+  try { res.json((await aiClient.post('/agents', req.body)).data); }
+  catch (error) { handleProxyError(res, error, 'Create agent'); }
 });
+
+router.get('/agents', async (req, res) => {
+  try { res.json((await aiClient.get('/agents')).data); }
+  catch (error) { handleProxyError(res, error, 'List agents'); }
+});
+
+router.get('/agents/:id', async (req, res) => {
+  try { res.json((await aiClient.get(`/agents/${req.params.id}`)).data); }
+  catch (error) { handleProxyError(res, error, 'Get agent'); }
+});
+
+router.delete('/agents/:id', async (req, res) => {
+  try { res.json((await aiClient.delete(`/agents/${req.params.id}`)).data); }
+  catch (error) { handleProxyError(res, error, 'Delete agent'); }
+});
+
+router.post('/agents/:id/analyze', async (req, res) => {
+  try { res.json((await aiClient.post(`/agents/${req.params.id}/analyze`, req.body)).data); }
+  catch (error) { handleProxyError(res, error, 'Dispatch agent'); }
+});
+
+// General analysis
+router.post('/analyze', async (req, res) => {
+  try { res.json((await aiClient.post('/analyze', req.body)).data); }
+  catch (error) { handleProxyError(res, error, 'Analysis'); }
+});
+
+function handleProxyError(res, error, context) {
+  console.error(`[AI Proxy] ${context} failed:`, error.message);
+  if (error.response) {
+    res.status(error.response.status).json(error.response.data);
+  } else if (error.code === 'ECONNREFUSED') {
+    res.status(503).json({ success: false, error: 'AI service is temporarily unavailable' });
+  } else {
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+}
 
 module.exports = router;
 ```
 
 ### Add Routes to Main App
 
-In your main `app.js` or `index.js`:
-
 ```javascript
-const express = require('express');
-const app = express();
-
-// ... your existing middleware ...
-
-// Import AI proxy routes
 const aiProxyRoutes = require('./routes/ai-proxy');
-
-// Mount AI routes
 app.use('/api/ai', aiProxyRoutes);
-
-// ... rest of your routes ...
-
-app.listen(PORT, () => {
-  console.log(`Backend API listening on port ${PORT}`);
-});
-```
-
-### Restart Backend
-
-```bash
-# If using PM2
-pm2 restart your-backend-app
-
-# Or
-pm2 restart all
 ```
 
 ---
 
-## Step 3: Update Frontend Configuration
-
-### Frontend `.env` (Remove AI_API_URL)
-
-```bash
-# Backend API (running on VPS via PM2)
-REACT_APP_BE_API_URL=https://evth-api.hirodev.space/api
-
-# Remove this line - no longer needed!
-# REACT_APP_AI_API_URL=http://178.18.255.19:5000
-
-NODE_ENV=development
-REACT_APP_PROJECT_NAME=EventHorizon
-REACT_APP_SMALL_NAME=eventhorizon
-REACT_APP_CONTACT_EMAIL=support@eventhorizon.io
-GENERATE_SOURCEMAP=false
-PORT=3021
-
-TSC_COMPILE_ON_ERROR=true
-DISABLE_ESLINT_PLUGIN=true
-SKIP_PREFLIGHT_CHECK=true
-```
-
-### Frontend API Calls
-
-Update your React code to only call the Backend API:
-
-```javascript
-// services/api.js or wherever you make API calls
-
-const API_BASE = process.env.REACT_APP_BE_API_URL;
-
-/**
- * Analyze portfolio using AI agents
- */
-export const analyzePortfolio = async (stocks) => {
-  const response = await fetch(`${API_BASE}/ai/portfolio/analyze`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ stocks })
-  });
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  return await response.json();
-};
-
-/**
- * Get news only
- */
-export const getNews = async (stocks) => {
-  const response = await fetch(`${API_BASE}/ai/news`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ stocks })
-  });
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  return await response.json();
-};
-
-/**
- * Get financial reports only
- */
-export const getReports = async (stocks) => {
-  const response = await fetch(`${API_BASE}/ai/reports`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ stocks })
-  });
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  return await response.json();
-};
-
-/**
- * Check AI service health
- */
-export const checkAIHealth = async () => {
-  const response = await fetch(`${API_BASE}/ai/health`);
-  return await response.json();
-};
-```
-
-### Usage in React Components
-
-```javascript
-import { analyzePortfolio, getNews, getReports } from './services/api';
-
-function PortfolioAnalyzer() {
-  const [stocks, setStocks] = useState(['AAPL', 'GOOGL', 'TSLA']);
-  const [analysis, setAnalysis] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleAnalyze = async () => {
-    setLoading(true);
-    try {
-      const result = await analyzePortfolio(stocks);
-      setAnalysis(result);
-      console.log('Analysis complete:', result);
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      alert('Failed to analyze portfolio');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <button onClick={handleAnalyze} disabled={loading}>
-        {loading ? 'Analyzing...' : 'Analyze Portfolio'}
-      </button>
-      {analysis && <div>{/* Display results */}</div>}
-    </div>
-  );
-}
-```
-
----
-
-## Step 4: Testing the Integration
+## Step 3: Testing the Integration
 
 ### Test 1: Health Check
 
 ```bash
-# Test Backend → AI proxy
 curl https://evth-api.hirodev.space/api/ai/health
-```
-
-Expected:
-```json
-{
-  "backend": "healthy",
-  "ai_service": {
-    "status": "healthy",
-    "timestamp": "2026-01-17T...",
-    "service": "event-horizon-ai"
-  }
-}
 ```
 
 ### Test 2: Portfolio Analysis
@@ -455,107 +212,15 @@ Expected:
 ```bash
 curl -X POST https://evth-api.hirodev.space/api/ai/portfolio/analyze \
   -H "Content-Type: application/json" \
-  -d '{"stocks": ["AAPL", "GOOGL"]}'
+  -d '{"portfolio": ["AAPL", "GOOGL"]}'
 ```
 
-Expected:
-```json
-{
-  "portfolio": ["AAPL", "GOOGL"],
-  "analysis_timestamp": "2026-01-17T...",
-  "news_data": {...},
-  "report_data": {...},
-  "summary": {...}
-}
-```
-
-### Test 3: From Frontend
-
-In your React app (localhost:3021):
-
-```javascript
-// Open browser console
-const result = await fetch('https://evth-api.hirodev.space/api/ai/portfolio/analyze', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ stocks: ['AAPL', 'TSLA'] })
-}).then(r => r.json());
-
-console.log(result);
-```
-
----
-
-## Security Benefits
-
-✅ **AI service not exposed to internet** - Only accessible via localhost
-✅ **Single API endpoint** - Frontend only knows about Backend
-✅ **Backend can add auth** - Protect AI routes with JWT/sessions
-✅ **Rate limiting** - Backend can limit AI calls per user
-✅ **Request validation** - Backend validates before forwarding
-✅ **Error handling** - Backend provides consistent error responses
-✅ **Logging** - Backend logs all AI service calls
-
----
-
-## Firewall Configuration
-
-Since AI service is localhost-only, **close port 5000** on firewall:
+### Test 3: Thinking Agent
 
 ```bash
-# Block port 5000 from external access
-sudo ufw deny 5000/tcp
-
-# Only allow your Backend API port (if using standalone)
-# Usually 80/443 if behind Nginx
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-
-# Check status
-sudo ufw status
-```
-
----
-
-## Deployment Checklist
-
-- [ ] AI service deployed and running on localhost:5000
-- [ ] AI service `.env` has `API_HOST=127.0.0.1`
-- [ ] Node.js backend has proxy routes (`/api/ai/*`)
-- [ ] Backend `axios` dependency installed
-- [ ] Backend restarted with new routes
-- [ ] Port 5000 blocked from external access (firewall)
-- [ ] Frontend `.env` has only `REACT_APP_BE_API_URL`
-- [ ] Frontend updated to call backend proxy routes
-- [ ] Health check works: `curl https://evth-api.hirodev.space/api/ai/health`
-- [ ] Portfolio analysis works from frontend
-
----
-
-## Monitoring
-
-### Check AI Service Status (on VPS)
-
-```bash
-sudo systemctl status event-horizon-ai
-sudo journalctl -u event-horizon-ai -f
-```
-
-### Check Backend Logs (PM2)
-
-```bash
-pm2 logs your-backend-app
-pm2 monit
-```
-
-### Test Connection
-
-```bash
-# On VPS, test AI service directly
-curl http://localhost:5000/health
-
-# From outside, test Backend proxy
-curl https://evth-api.hirodev.space/api/ai/health
+curl -X POST https://evth-api.hirodev.space/api/ai/agents/think \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"], "system_prompt": "Analyze for value investing", "max_iterations": 3}'
 ```
 
 ---
@@ -567,45 +232,59 @@ curl https://evth-api.hirodev.space/api/ai/health
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/ai/health` | GET | Health check |
-| `/api/ai/portfolio/analyze` | POST | Full analysis |
-| `/api/ai/news` | POST | News only |
-| `/api/ai/reports` | POST | Reports only |
+| `/api/ai/portfolio/analyze` | POST | Full Stage 1 pipeline |
+| `/api/ai/agents/candlestick` | POST | OHLCV price data |
+| `/api/ai/agents/earnings` | POST | Earnings/financials |
+| `/api/ai/agents/news` | POST | News articles |
+| `/api/ai/agents/technical` | POST | Technical indicators |
+| `/api/ai/agents/fundamentals` | POST | Fundamental metrics |
+| `/api/ai/agents/web-search` | POST | Web search (Tavily/Exa) |
+| `/api/ai/agents/bull-bear-analyzer` | POST | Bull-bear debate analysis |
+| `/api/ai/agents/think` | POST | Thinking agent (ReAct) |
+| `/api/ai/agents/custom` | POST | Custom agent execution |
+| `/api/ai/agents` | POST | Create agent |
+| `/api/ai/agents` | GET | List all agents |
+| `/api/ai/agents/:id` | GET | Get agent details |
+| `/api/ai/agents/:id` | DELETE | Delete agent |
+| `/api/ai/agents/:id/analyze` | POST | Dispatch agent analysis |
+| `/api/ai/analyze` | POST | General analysis |
 
 ### Backend proxies to AI Service:
 
-| Backend Route | → | AI Service Route |
-|---------------|---|------------------|
-| `/api/ai/health` | → | `http://localhost:5000/health` |
-| `/api/ai/portfolio/analyze` | → | `http://localhost:5000/api/portfolio/analyze` |
-| `/api/ai/news` | → | `http://localhost:5000/api/news` |
-| `/api/ai/reports` | → | `http://localhost:5000/api/reports` |
-| `/api/ai/agents/think` | → | `http://localhost:5000/agents/think` |
-| `/api/ai/agents/candlestick` | → | `http://localhost:5000/agents/candlestick` |
-| `/api/ai/agents/earnings` | → | `http://localhost:5000/agents/earnings` |
-| `/api/ai/agents/technical` | → | `http://localhost:5000/agents/technical` |
-| `/api/ai/agents/fundamentals` | → | `http://localhost:5000/agents/fundamentals` |
+| Backend Route | AI Service Route |
+|---------------|------------------|
+| `/api/ai/health` | `http://localhost:8030/health` |
+| `/api/ai/portfolio/analyze` | `http://localhost:8030/api/v1/analyze-portfolio` |
+| `/api/ai/agents/{name}` | `http://localhost:8030/agents/{name}` |
+| `/api/ai/agents` | `http://localhost:8030/agents` |
+| `/api/ai/agents/:id/analyze` | `http://localhost:8030/agents/{id}/analyze` |
+| `/api/ai/analyze` | `http://localhost:8030/analyze` |
 
-### Thinking Agent Endpoint
+---
 
-The `/agents/think` endpoint has a longer timeout (3 minutes) due to iterative processing:
+## Firewall Configuration
 
-```javascript
-// Proxy thinking agent requests with extended timeout
-router.post('/agents/think', async (req, res) => {
-  try {
-    const response = await axios.post(
-      'http://localhost:5000/agents/think',
-      req.body,
-      { timeout: 180000 }  // 3 minute timeout
-    );
-    res.json(response.data);
-  } catch (error) {
-    // Handle timeout and errors
-  }
-});
+```bash
+# Block AI service port from external access
+sudo ufw deny 8030/tcp
+
+# Allow Backend API port
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
 ```
 
-See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentation.
+---
+
+## Deployment Checklist
+
+- [ ] AI service deployed and running on localhost:8030
+- [ ] LLM backend (vLLM) running and accessible from AI service
+- [ ] Node.js backend has proxy routes (`/api/ai/*`)
+- [ ] Backend `axios` dependency installed
+- [ ] Port 8030 blocked from external access (firewall)
+- [ ] Frontend `.env` has only `REACT_APP_BE_API_URL`
+- [ ] Health check works: `curl https://evth-api.hirodev.space/api/ai/health`
+- [ ] Portfolio analysis works from frontend
 
 ---
 
@@ -615,25 +294,15 @@ See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentati
 
 ```bash
 # On VPS, check if AI service is running
-sudo systemctl status event-horizon-ai
-curl http://localhost:5000/health
+curl http://localhost:8030/health
 
-# Check if binding to localhost
-sudo lsof -i :5000
+# Check what's on port 8030
+sudo lsof -i :8030
 ```
-
-### CORS errors
-
-The AI service already has CORS configured. Make sure your backend domain is allowed in `event_horizon/thinking-multi-agent/app/main.py`.
 
 ### Timeout errors
 
-AI processing can take 30-60 seconds. Increase timeout:
-
-```javascript
-// In ai-proxy.js
-const AI_TIMEOUT = 120000; // 2 minutes
-```
+AI processing can take 30-120 seconds depending on the endpoint. The thinking agent can take up to 3 minutes. Adjust timeouts accordingly.
 
 ---
 

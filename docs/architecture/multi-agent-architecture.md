@@ -1,11 +1,11 @@
 # Event Horizon - Multi-Agent Architecture
 
-**Status**: Data Pipeline Stage 1 ✅ Implemented | Data Pipeline Stages 2-3 & analyzer System ⏳ Planned
-**Last Updated**: 2026-01-25
+**Status**: Data Pipeline Stages 1-3 ✅ Implemented | Bull-Bear Analyzer ✅ Implemented | Remaining Teams ⏳ Planned
+**Last Updated**: 2026-02-10
 
 Complete multi-agent architecture for Event Horizon, consisting of:
-- **Data Processing Pipeline** (3 stages): Raw data → Normalized data → Feature vectors
-- **analyzer-Making System** (4 teams): Analysis → Research → Risk Management → Trading
+- **Data Processing Pipeline** (3 stages): Raw data -> Normalized data -> Feature vectors
+- **Analyzer System**: Bull-Bear Analyzer (implemented) + planned teams (Analysts, Risk, Trader)
 
 ---
 
@@ -16,13 +16,15 @@ Complete multi-agent architecture for Event Horizon, consisting of:
    - [Stage 1: Data Retrieval](#stage-1-data-retrieval)
    - [Stage 2: Normalization](#stage-2-normalization)
    - [Stage 3: Feature Extraction](#stage-3-feature-extraction)
-3. [analyzer-Making System](#analyzer-making-system)
+3. [Analyzer System](#analyzer-system)
+   - [Bull-Bear Analyzer](#bull-bear-analyzer)
    - [Team 1: Analyst Team](#team-1-analyst-team)
-   - [Team 2: Researcher Team](#team-2-researcher-team)
    - [Team 3: Risk Management Team](#team-3-risk-management-team)
    - [Team 4: Trader Agent](#team-4-trader-agent)
-4. [Workflow & Communication](#workflow--communication)
-5. [Implementation Status](#implementation-status)
+4. [Thinking Agent System](#thinking-agent-system)
+5. [Observability (Opik)](#observability-opik)
+6. [Workflow & Communication](#workflow--communication)
+7. [Implementation Status](#implementation-status)
 
 ---
 
@@ -32,119 +34,91 @@ Event Horizon uses **two separate multi-agent systems** that work together:
 
 ### System 1: Data Processing Pipeline
 **Purpose**: Transform raw market data into feature vectors
-**Stages**: 3 (Data Retrieval → Normalization → Feature Extraction)
-**Status**: Stage 1 ✅ Implemented, Stages 2-3 ⏳ Planned
+**Stages**: 3 (Data Retrieval -> Normalization -> Feature Extraction)
+**Status**: All 3 stages ✅ Implemented
 
-### System 2: analyzer-Making System
+### System 2: Analyzer System
 **Purpose**: Make intelligent trading decisions from feature vectors
-**Teams**: 4 (Analyst → Researcher → Risk Management → Trader)
-**Status**: ⏳ Planned
+**Components**: Bull-Bear Analyzer (implemented) + 3 planned teams
+**Status**: Bull-Bear Analyzer ✅ Implemented, Teams 1/3/4 ⏳ Planned
 
 ### Complete Architecture
 
 ```
-╔═════════════════════════════════════════════════════════════════════════╗
-║                   SYSTEM 1: DATA PROCESSING PIPELINE                    ║
-╚═════════════════════════════════════════════════════════════════════════╝
++=========================================================================+
+|                   SYSTEM 1: DATA PROCESSING PIPELINE                      |
++=========================================================================+
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                   STAGE 1: DATA RETRIEVAL ✅                             │
-│                  (Heterogeneous Data Collection)                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│  5 Agents Running in Parallel:                                         │
-│  1. Candlestick Agent → OHLCV price data                                │
-│  2. Earnings Agent    → Financial reports                               │
-│  3. News Agent        → News articles                                   │
-│  4. Technical Agent   → Technical indicators (SMA/RSI/MACD)            │
-│  5. Fundamentals Agent → Fundamental metrics (P/E/ROE/etc.)            │
-│                                                                         │
-│  Output: Raw, heterogeneous data in agent-specific formats             │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│             STAGE 2: NORMALIZATION & STANDARDIZATION ⏳                  │
-│                  (Create Unified "DNA" Dataset)                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│  • Time synchronization across data sources                            │
-│  • Symbol mapping and normalization                                    │
-│  • Format standardization to tabular schema                            │
-│                                                                         │
-│  Output: Standardized tabular "DNA" dataset                            │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                  STAGE 3: FEATURE EXTRACTION ⏳                          │
-│          (LLM/Neural AI - Intelligent Feature Discovery)                │
-├─────────────────────────────────────────────────────────────────────────┤
-│  • Extract non-obvious patterns from normalized data                   │
-│  • Generate embeddings and latent features                             │
-│  • Identify predictive signals for trading                             │
-│                                                                         │
-│  Output: Feature vectors ready for trading decisions                   │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-╔═════════════════════════════════════════════════════════════════════════╗
-║                   SYSTEM 2: analyzer-MAKING SYSTEM                      ║
-╚═════════════════════════════════════════════════════════════════════════╝
++-------------------------------------------------------------------------+
+|                   STAGE 1: DATA RETRIEVAL ✅                              |
+|                  (Heterogeneous Data Collection)                        |
+|-------------------------------------------------------------------------|
+|  5 Agents Running in Parallel:                                         |
+|  1. Candlestick Agent -> OHLCV price data (Yahoo Finance / Massive)    |
+|  2. Earnings Agent    -> Financial reports (Yahoo Finance)              |
+|  3. News Agent        -> News articles (Tavily / Exa)                  |
+|  4. Technical Agent   -> Technical indicators (SMA/RSI/MACD)           |
+|  5. Fundamentals Agent -> Fundamental metrics (P/E/ROE/etc.)           |
+|                                                                         |
+|  Output: Raw, heterogeneous data in agent-specific formats             |
++-------------------------------------------------------------------------+
+                                |
++-------------------------------------------------------------------------+
+|             STAGE 2: NORMALIZATION & QUALITY SCORING ✅                   |
+|                 (Create Unified Dataset Per Symbol)                      |
+|-------------------------------------------------------------------------|
+|  * DataNormalizer: unify 6 data categories per symbol                  |
+|  * Quality scoring (0-1) based on data completeness                    |
+|  * Symbol categorization: complete (>=0.9), partial (>=0.5), error     |
+|                                                                         |
+|  Output: NormalizedSymbolData with unified structure + quality scores   |
++-------------------------------------------------------------------------+
+                                |
++-------------------------------------------------------------------------+
+|                  STAGE 3: FEATURE EXTRACTION ✅                           |
+|             (LLM-Powered Structured Insight Extraction)                  |
+|-------------------------------------------------------------------------|
+|  * LLMFeatureExtractor calls Mistral/vLLM for each symbol              |
+|  * Extracts: sentiment, technical signal, fundamental health,          |
+|    key patterns, risks, opportunities, news sentiment                  |
+|  * Full Opik tracing for observability                                 |
+|                                                                         |
+|  Output: SymbolFeatures with structured insights per symbol            |
++-------------------------------------------------------------------------+
+                                |
++=========================================================================+
+|                   SYSTEM 2: ANALYZER SYSTEM                              |
++=========================================================================+
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        TEAM 1: ANALYST TEAM ⏳                           │
-│                    (Parallel Multi-Perspective Analysis)                │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
-│  │ Fundamentals │  │    Market    │  │     News     │                 │
-│  │   Analyst    │  │   Analyst    │  │   Analyst    │                 │
-│  └──────────────┘  └──────────────┘  └──────────────┘                 │
-│  ┌──────────────┐                                                      │
-│  │ Social Media │                                                      │
-│  │   Analyst    │                                                      │
-│  └──────────────┘                                                      │
-│                                                                         │
-│  Output: Multi-dimensional analysis reports                            │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     TEAM 2: RESEARCHER TEAM ⏳                           │
-│                      (Bull vs Bear Debate)                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
-│  │     Bull     │  │     Bear     │  │   Research   │                 │
-│  │  Researcher  │  │  Researcher  │  │   Manager    │                 │
-│  └──────────────┘  └──────────────┘  └──────────────┘                 │
-│                 (Multi-Round Debate & Consensus)                       │
-│                                                                         │
-│  Output: Investment thesis with bull/bear cases                        │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                  TEAM 3: RISK MANAGEMENT TEAM ⏳                         │
-│                   (Risk Assessment Debate)                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
-│  │ Conservative │  │   Neutral    │  │  Aggressive  │                 │
-│  │   Debator    │  │   Debator    │  │   Debator    │                 │
-│  └──────────────┘  └──────────────┘  └──────────────┘                 │
-│  ┌──────────────┐                                                      │
-│  │     Risk     │                                                      │
-│  │   Manager    │                                                      │
-│  └──────────────┘                                                      │
-│                                                                         │
-│  Output: Risk parameters & position sizing                             │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      TEAM 4: TRADER AGENT ⏳                             │
-│                      (Final analyzer & Execution)                       │
-├─────────────────────────────────────────────────────────────────────────┤
-│  • Reviews all team outputs                                            │
-│  • Makes final trading analyzer                                        │
-│  • Determines portfolio allocation                                     │
-│  • Generates order execution strategy                                  │
-│                                                                         │
-│  Output: Trading actions & execution plan                              │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-                        🎯 Trading Actions
++-------------------------------------------------------------------------+
+|                  BULL-BEAR ANALYZER ✅                                    |
+|                    (3-Agent Debate System)                               |
+|-------------------------------------------------------------------------|
+|  +----------+   +----------+   +-----------+                           |
+|  |   Bull   |   |   Bear   |   | Research  |                           |
+|  |Researcher|   |Researcher|   | Manager   |                           |
+|  +----------+   +----------+   +-----------+                           |
+|         (Bull argues -> Bear rebuts -> Manager synthesizes)             |
+|                                                                         |
+|  Output: InvestmentThesis with probability-weighted scenarios           |
++-------------------------------------------------------------------------+
+                                |
++-------------------------------------------------------------------------+
+|                      TEAM 1: ANALYST TEAM ⏳                             |
+|                  (Parallel Multi-Perspective Analysis)                   |
++-------------------------------------------------------------------------+
+                                |
++-------------------------------------------------------------------------+
+|                  TEAM 3: RISK MANAGEMENT TEAM ⏳                         |
+|                   (Risk Assessment Debate)                              |
++-------------------------------------------------------------------------+
+                                |
++-------------------------------------------------------------------------+
+|                      TEAM 4: TRADER AGENT ⏳                             |
+|                    (Final Decision & Execution)                          |
++-------------------------------------------------------------------------+
+                                |
+                         Trading Actions
 ```
 
 **Legend**: ✅ = Implemented, ⏳ = Planned
@@ -165,86 +139,30 @@ Stage 1 is responsible for **heterogeneous data retrieval** from multiple extern
 
 **Status**: ✅ Fully Implemented
 
-### Quick Links
-
-- 📚 [Quick Start Guide](../../QUICKSTART_STAGE1.md)
-- 🔧 [Tauric Integration Details](../../stage_1/TAURIC_INTEGRATION.md)
-- 📝 [Update Summary](../../STAGE1_UPDATE_SUMMARY.md)
-
-**Note**: The codebase uses `stage_1/` directory naming, which refers to Stage 1 of the Data Processing Pipeline.
-
-### Architecture
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                      APPLICATION STAGE                                  │
-│                      main_stage1.py                                     │
-│  • Configuration setup                                                 │
-│  • Result display                                                      │
-│  • Output persistence                                                  │
-└────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌────────────────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATION STAGE                                  │
-│               stage_1/orchestrator/stage_1_orchestrator.py             │
-│                                                                         │
-│  Stage1Orchestrator:                                                   │
-│  • Parallel execution (ThreadPoolExecutor, 5 workers)                  │
-│  • Agent lifecycle management                                          │
-│  • Result aggregation into Stage1Output                                │
-│  • Error handling and status tracking                                  │
-└────────────────────────────────────────────────────────────────────────┘
-      │            │           │           │           │
-      ▼            ▼           ▼           ▼           ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│Candlestick│ │ Earnings │ │   News   │ │Technical │ │Fundament-│
-│  Agent   │ │  Agent   │ │  Agent   │ │  Agent   │ │als Agent │
-│          │ │          │ │          │ │          │ │          │
-│OHLCV data│ │Financial │ │Articles &│ │SMA, RSI, │ │P/E, ROE, │
-│          │ │ reports  │ │headlines │ │MACD      │ │ratios    │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
-      │            │           │           │           │
-      ▼            ▼           ▼           ▼           ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│  Chart   │ │Financial │ │   News   │ │  Stock   │ │  Stock   │
-│ Service  │ │ Service  │ │ Service  │ │  Tools   │ │  Tools   │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
-      │            │           │           │           │
-      ▼            ▼           ▼           ▼           ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│  Yahoo   │ │  Yahoo   │ │ NewsAPI  │ │ yfinance │ │ yfinance │
-│ Finance  │ │ Finance  │ │          │ │          │ │          │
-│Massive.com│ │          │ │          │ │          │ │          │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
-```
-
 ### Directory Structure
 
 ```
-stage_1/
-├── __init__.py                 # Stage 1 exports
-├── agents/                     # Data retrieval agents
-│   ├── __init__.py
-│   ├── candlestick_agent.py   # OHLCV price data
-│   ├── earnings_agent.py      # Financial reports
-│   ├── news_agent.py          # News articles
-│   ├── technical_agent.py     # Technical indicators (Tauric)
-│   ├── fundamentals_agent.py  # Fundamental metrics (Tauric)
-│   └── utils/
-│       └── stock_tools.py     # Utility functions (Tauric)
-├── services/                   # API client stage
-│   ├── __init__.py
-│   ├── chart_data_client.py   # Yahoo Finance charts
-│   ├── massive_chart_client.py # Massive.com alternative
-│   ├── financial_data_client.py # Yahoo Finance fundamentals
-│   └── news_api_client.py     # NewsAPI client
-├── models/                     # Data schemas
-│   ├── __init__.py
-│   └── schemas.py             # Stage1Output and data classes
-├── orchestrator/               # Parallel execution
-│   ├── __init__.py
-│   └── stage_1_orchestrator.py # Stage1Orchestrator class
-└── TAURIC_INTEGRATION.md      # Integration details
+event_horizon/data_pipeline/stage_1/
+|-- __init__.py
+|-- agents/
+|   |-- __init__.py
+|   |-- candlestick_agent.py       # OHLCV price data
+|   |-- earnings_agent.py          # Financial reports
+|   |-- news_agent.py              # News articles (Tavily/Exa)
+|   |-- technical_agent.py         # Technical indicators
+|   |-- fundamentals_agent.py      # Fundamental metrics
+|   +-- utils/
+|       +-- stock_tools.py         # get_stock_data, get_indicators, get_fundamentals
+|-- services/
+|   |-- chart_data_client.py       # Yahoo Finance OHLCV
+|   |-- massive_chart_client.py    # Massive.com OHLCV (alternative)
+|   |-- financial_data_client.py   # Yahoo Finance earnings/financials
+|   |-- news_api_client.py         # NewsAPI.org client (legacy)
+|   +-- news_search_client.py      # Tavily + Exa news search (current)
+|-- models/
+|   +-- schemas.py                 # Stage1Output, NewsData, EarningsData, ChartData, etc.
++-- orchestrator/
+    +-- stage_1_orchestrator.py    # Stage1Orchestrator (parallel execution)
 ```
 
 ### Implemented Agents
@@ -253,144 +171,68 @@ stage_1/
 
 **Purpose**: Retrieve OHLCV (Open, High, Low, Close, Volume) price data
 
-**File**: `stage_1/agents/candlestick_agent.py`
+**File**: `event_horizon/data_pipeline/stage_1/agents/candlestick_agent.py`
 
 **Data Sources**:
-- Primary: Yahoo Finance
-- Alternative: Massive.com API
+- Primary: Yahoo Finance (yfinance)
+- Alternative: Massive.com API (set `USE_MASSIVE_API=true`)
 
-**Configuration**:
-```python
-{
-    "period": "1mo",        # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, max
-    "interval": "1d",       # 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo
-    "data_source": "yahoo"  # or "massive"
-}
-```
-
-**Output**: `ChartData`
-- `symbol`, `candles`, `period`, `interval`, `data_source`, `error`
+**Output**: `ChartData` (symbol, candles, period, interval)
 
 #### 2. Earnings Agent ✅
 
 **Purpose**: Retrieve financial reports and earnings data
 
-**File**: `stage_1/agents/earnings_agent.py`
+**File**: `event_horizon/data_pipeline/stage_1/agents/earnings_agent.py`
 
-**Data Source**: Yahoo Finance
+**Data Source**: Yahoo Finance (stocks, ETFs, mutual funds)
 
-**Configuration**:
-```python
-{
-    "include_financials": True,
-    "earnings_periods": 4  # Number of quarters
-}
-```
-
-**Output**: `EarningsData`
-- `symbol`, `security_type`, `name`, `earnings_reports`, `financial_statements`, `metrics`, `error`
+**Output**: `EarningsData` (symbol, security_type, name, earnings_reports, financial_statements, metrics, fund_info)
 
 #### 3. News Agent ✅
 
 **Purpose**: Retrieve news articles about stocks
 
-**File**: `stage_1/agents/news_agent.py`
+**File**: `event_horizon/data_pipeline/stage_1/agents/news_agent.py`
 
-**Data Source**: NewsAPI (requires API key)
+**Data Source**: Tavily (primary), Exa (fallback) via `news_search_client.py`
 
-**Configuration**:
-```python
-{
-    "max_articles_per_stock": 10,
-    "days_back": 7
-}
-```
+**Output**: `NewsData` (symbol, articles, total_articles, data_source)
 
-**Output**: `NewsData`
-- `symbol`, `articles`, `total_articles`, `data_source`, `error`
-
-#### 4. Technical Agent ✅ (Tauric-Inspired)
+#### 4. Technical Agent ✅
 
 **Purpose**: Calculate technical indicators
 
-**File**: `stage_1/agents/technical_agent.py`
+**File**: `event_horizon/data_pipeline/stage_1/agents/technical_agent.py`
 
-**Data Source**: Yahoo Finance via yfinance
+**Data Source**: Yahoo Finance via yfinance + custom calculations
 
-**Configuration**:
-```python
-{
-    "indicators": ["SMA", "EMA", "RSI", "MACD"],
-    "look_back_days": 30
-}
-```
+**Supported Indicators**: SMA (20/50 day), EMA (12/26 day), RSI (14 period), MACD
 
-**Supported Indicators**:
-- **SMA** - Simple Moving Average (20/50 day)
-- **EMA** - Exponential Moving Average (12/26 day)
-- **RSI** - Relative Strength Index (14 period)
-- **MACD** - Moving Average Convergence Divergence
+**Output**: `TechnicalData` (symbol, indicators, trade_date, look_back_days)
 
-**Output**: `TechnicalData`
-- `symbol`, `indicators`, `trade_date`, `look_back_days`, `data_source`, `error`
-
-#### 5. Fundamentals Agent ✅ (Tauric-Inspired)
+#### 5. Fundamentals Agent ✅
 
 **Purpose**: Retrieve fundamental metrics and financial ratios
 
-**File**: `stage_1/agents/fundamentals_agent.py`
+**File**: `event_horizon/data_pipeline/stage_1/agents/fundamentals_agent.py`
 
 **Data Source**: Yahoo Finance via yfinance
 
-**Configuration**:
-```python
-{
-    "include_ratios": True,
-    "include_financials": True
-}
-```
+**Metrics**: P/E, Forward P/E, PEG, Price/Book, ROE, ROA, profit margins, debt/equity, dividends
 
-**Metrics Retrieved**:
-- **Valuation**: P/E, Forward P/E, PEG, Price/Book, Price/Sales
-- **Profitability**: Profit margin, operating margin, ROE, ROA
-- **Financial Health**: Total cash/debt, current ratio, debt/equity
-- **Growth**: Revenue growth, earnings growth
-- **Dividends**: Dividend yield, payout ratio
+**Output**: `FundamentalsData` (symbol, fundamentals_text)
 
-**Output**: `FundamentalsData`
-- `symbol`, `fundamentals_text`, `data_source`, `error`
+### Services
 
-### Usage Example
-
-```python
-from stage_1 import Stage1Orchestrator
-
-# Configure orchestrator
-config = {
-    "enabled_agents": ["candlestick", "earnings", "news", "technical", "fundamentals"],
-    "max_workers": 5,
-    "agent_configs": {
-        "candlestick": {
-            "period": "3mo",
-            "interval": "1d",
-            "data_source": "yahoo"
-        },
-        "technical": {
-            "indicators": ["SMA", "RSI", "MACD", "EMA"],
-            "look_back_days": 60
-        }
-    }
-}
-
-# Execute
-orchestrator = Stage1Orchestrator(config=config)
-result = orchestrator.execute(["AAPL", "TSLA", "NVDA"])
-
-# Access data
-stage1_output = result["stage1_output"]
-print(stage1_output.chart_data["AAPL"].candles)
-print(stage1_output.technical_data["AAPL"].indicators["RSI"])
-```
+| Service | File | Purpose |
+|---------|------|---------|
+| ChartDataClient | `chart_data_client.py` | yfinance OHLCV retrieval |
+| MassiveChartClient | `massive_chart_client.py` | Massive.com OHLCV (alternative) |
+| FinancialDataClient | `financial_data_client.py` | yfinance earnings, financials, metrics |
+| `tavily_news_search()` | `news_search_client.py` | Tavily news search (primary) |
+| `exa_news_search()` | `news_search_client.py` | Exa news search (fallback) |
+| NewsAPIClient | `news_api_client.py` | NewsAPI.org client (legacy, not used) |
 
 ### Performance
 
@@ -405,27 +247,49 @@ print(stage1_output.technical_data["AAPL"].indicators["RSI"])
 
 ### Overview
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
-Stage 2 transforms heterogeneous Stage 1 data into a standardized "DNA" dataset with unified schemas, time synchronization, and format normalization.
+Stage 2 transforms heterogeneous Stage 1 data into a standardized dataset with unified schemas and data quality scoring per symbol.
 
-### Responsibilities
+### Directory Structure
 
-- **Time Synchronization**: Align data from different sources to common timestamps
-- **Symbol Mapping**: Normalize ticker symbols across data sources
-- **Format Standardization**: Convert all data to tabular schema
-- **Data Quality**: Handle missing values, outliers, and inconsistencies
+```
+event_horizon/data_pipeline/stage_2/
+|-- models/
+|   +-- schemas.py                  # NormalizedSymbolData, Stage2Output
+|-- normalizer/
+|   +-- data_normalizer.py          # DataNormalizer
++-- orchestrator/
+    +-- stage_2_orchestrator.py     # Stage2Orchestrator
+```
+
+### How It Works
+
+- **DataNormalizer** unifies 6 data categories per symbol: price, technical, fundamentals, news, earnings, web_search
+- **Quality scoring** (0-1) based on data completeness across categories, with 20% penalty for errors
+- **Symbol categorization**: complete (>=0.9), partial (>=0.5), or error (<0.5)
+- Sequential processing: each symbol normalized independently
 
 ### Output Schema
 
 ```python
 @dataclass
+class NormalizedSymbolData:
+    symbol: str
+    price_data: Optional[str]
+    technical_indicators: Optional[str]
+    fundamentals: Optional[str]
+    news: Optional[str]
+    earnings: Optional[str]
+    web_search: Optional[str]
+    data_quality_score: float  # 0.0 - 1.0
+
+@dataclass
 class Stage2Output:
     portfolio_id: str
     symbols: List[str]
-    normalized_data: pd.DataFrame  # Unified tabular format
-    metadata: Dict[str, Any]
-    timestamp: str
+    normalized_data: Dict[str, NormalizedSymbolData]
+    # + quality metrics
 ```
 
 ---
@@ -434,421 +298,152 @@ class Stage2Output:
 
 ### Overview
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
-Stage 3 uses LLM/Neural AI to extract non-obvious patterns and generate predictive features from normalized data.
+Stage 3 uses LLM (Mistral via vLLM) to extract structured, analytical features from normalized data for each symbol.
 
-### Responsibilities
+### Directory Structure
 
-- **Pattern Recognition**: Identify hidden patterns in time-series data
-- **Embedding Generation**: Create semantic embeddings from text (news, earnings)
-- **Latent Features**: Extract features not directly observable in raw data
-- **Signal Discovery**: Identify predictive signals for trading decisions
+```
+event_horizon/data_pipeline/stage_3/
+|-- models/
+|   +-- schemas.py                   # SymbolFeatures, Stage3Output
+|-- extractors/
+|   +-- llm_feature_extractor.py     # LLMFeatureExtractor (Opik-traced)
++-- orchestrator/
+    +-- stage_3_orchestrator.py      # Stage3Orchestrator
+```
+
+### How It Works
+
+- **LLMFeatureExtractor** prepares context from normalized data (price, technicals, fundamentals, news, web search)
+- Prompts LLM for **structured JSON output** with: market_sentiment, technical_signal, fundamental_health, key_patterns, risk_factors, opportunities, news_sentiment
+- Temperature: 0.3 (low for analytical precision)
+- Tracks LLM call count, total tokens, average extraction time
+- Full **Opik tracing** for observability
 
 ### Output Schema
 
 ```python
 @dataclass
-class Stage3Output:
-    portfolio_id: str
-    symbols: List[str]
-    features: Dict[str, FeatureVector]
-    metadata: Dict[str, Any]
-
-@dataclass
-class FeatureVector:
-    company_health_score: float
-    investor_sentiment_score: float
-    technical_momentum_score: float
-    macro_alignment_score: float
-    risk_score: float
-    # Additional extracted features
+class SymbolFeatures:
+    symbol: str
+    market_sentiment: str        # bullish, bearish, neutral
+    sentiment_confidence: float  # 0-1
+    technical_signal: str        # buy, sell, hold
+    technical_confidence: float
+    fundamental_health: str      # strong, weak, neutral
+    fundamental_confidence: float
+    key_patterns: List[str]
+    risk_factors: List[str]
+    opportunities: List[str]
+    news_sentiment: str
+    news_summary: str
+    feature_vector: Dict[str, float]
 ```
 
 ---
 
-## analyzer-Making System
+## Analyzer System
 
-The analyzer-Making System (System 2) operates **after** the Data Processing Pipeline. It consumes Stage 3 output (feature vectors) to make intelligent trading decisions through 4 specialized teams.
+The Analyzer System (System 2) operates **after** the Data Processing Pipeline. It consumes Stage 3 output (SymbolFeatures) to make trading decisions.
 
 ### System Position
 
 ```
-DATA PROCESSING PIPELINE          analyzer-MAKING SYSTEM
-Stage 1 → Stage 2 → Stage 3  →   Team 1 → Team 2 → Team 3 → Team 4
-  ↓         ↓         ↓              ↓        ↓        ↓        ↓
-Raw      Standard   Feature      Analysis  Research   Risk   Trading
-Data       DNA      Vectors                                  Actions
+DATA PROCESSING PIPELINE              ANALYZER SYSTEM
+Stage 1 -> Stage 2 -> Stage 3  ->   Bull-Bear -> [Team 1] -> [Team 3] -> [Team 4]
+  |          |          |               |
+Raw       Unified    Feature       Investment
+Data       Data      Vectors        Theses
+```
+
+---
+
+## Bull-Bear Analyzer
+
+### Overview
+
+**Status**: ✅ Implemented
+
+**Purpose**: Generate balanced investment theses through a structured 3-agent debate per symbol.
+
+**Location**: `event_horizon/analyzer_system/bull_bear_analyzer/`
+
+### Architecture
+
+```
+event_horizon/analyzer_system/bull_bear_analyzer/
+|-- __init__.py                    # Exports BullBearAnalyzer, BullBearAnalysisOutput
+|-- agents/
+|   |-- bull_researcher.py         # BullResearcher (argues for buying)
+|   |-- bear_researcher.py         # BearResearcher (argues for selling, rebuts bull)
+|   +-- research_manager.py        # ResearchManager (synthesizes balanced thesis)
+|-- models/
+|   +-- schemas.py                 # BullArgument, BearArgument, InvestmentThesis
++-- orchestrator/
+    +-- bull_bear_orchestrator.py   # BullBearAnalyzer (debate coordinator)
+```
+
+### Debate Flow (Per Symbol)
+
+1. **BullResearcher** generates bullish argument (BUY/STRONG_BUY) - focuses on growth, catalysts, upside. Temperature: 0.7.
+2. **BearResearcher** generates bearish counter-argument (SELL/STRONG_SELL/SHORT) - receives bull argument for rebuttal. Temperature: 0.7.
+3. **ResearchManager** synthesizes both into balanced `InvestmentThesis` (BUY/HOLD/SELL) with probability-weighted scenarios. Temperature: 0.4.
+
+### Auto-Data-Fetch
+
+The orchestrator automatically discovers and fetches missing data: if Stage 3 output has symbols without features, it runs the full Stage 1->2->3 pipeline to populate them before running the debate.
+
+### API Endpoint
+
+`POST /agents/bull-bear-analyzer` has 3 paths:
+- **Path A** (no data): Discovers required agents via single-shot tool discovery, returns `needs_data` response
+- **Path B** (`raw_data` provided): Processes through Stage 1->2->3 pipeline, then runs debate
+- **Path C** (pre-processed `data`): Runs debate directly with SymbolFeatures
+
+### Output
+
+```python
+@dataclass
+class InvestmentThesis:
+    symbol: str
+    recommendation: str     # BUY, HOLD, SELL
+    confidence: float       # 0-1
+    position_size: str
+    thesis_summary: str
+    bull_case_summary: str
+    bear_case_summary: str
+    bull_probability: float
+    bear_probability: float
+    base_case: str
+    bull_case: str
+    bear_case: str
 ```
 
 ---
 
 ## Team 1: Analyst Team
 
-### Overview
-
 **Status**: ⏳ Planned
 
-**Purpose**: Analyze different aspects of market data and provide specialized insights
-
-**Execution**: Parallel (all analysts run simultaneously)
-
-### Agents
-
-**Fundamentals Analyst**
-- **Input**: Company financial data, earnings reports, balance sheets
-- **Analysis**: Financial health, valuation ratios, growth metrics
-- **Output**: Fundamental strength score and reasoning
-
-**Market Analyst**
-- **Input**: Price action, technical indicators, volume patterns
-- **Analysis**: Trend identification, support/resistance, momentum
-- **Output**: Technical outlook and key levels
-
-**News Analyst**
-- **Input**: News articles, headlines, sentiment
-- **Analysis**: News impact, sentiment shift, event catalysis
-- **Output**: News sentiment score and key narratives
-
-**Social Media Analyst**
-- **Input**: Twitter/Reddit mentions, sentiment, trending topics
-- **Analysis**: Retail sentiment, hype detection, community pulse
-- **Output**: Social sentiment score and viral trends
-
-### Team Output
-
-Multi-dimensional analysis report consolidating all perspectives
-
----
-
-## Team 2: Researcher Team
-
-### Overview
-
-**Status**: ⏳ Planned
-
-**Purpose**: Debate investment thesis from bull and bear perspectives to reach balanced conclusion
-
-**Execution**: Sequential debate with configurable rounds
-
-### Agents
-
-**Bull Researcher**
-- **Role**: Advocate for long positions
-- **Analysis**: Find positive catalysts, growth opportunities, upside potential
-- **Stance**: Optimistic, growth-focused
-
-**Bear Researcher**
-- **Role**: Advocate for short positions or caution
-- **Analysis**: Identify risks, overvaluation, downside scenarios
-- **Stance**: Skeptical, risk-focused
-
-**Research Manager**
-- **Role**: Facilitate debate, synthesize perspectives
-- **Process**:
-  1. Present analyst team findings to bull/bear researchers
-  2. Conduct multi-round debate (configurable rounds)
-  3. Weigh arguments based on data strength
-  4. Generate consensus investment thesis
-
-### Team Output
-
-Balanced investment recommendation with bull/bear case and probability-weighted scenarios
+Multi-perspective parallel analysis (Fundamentals, Market, News, Social Media analysts).
 
 ---
 
 ## Team 3: Risk Management Team
 
-### Overview
-
 **Status**: ⏳ Planned
 
-**Purpose**: Assess risk and determine appropriate position sizing through multi-perspective debate
-
-**Execution**: Sequential debate with configurable rounds
-
-### Agents
-
-**Conservative Debator**
-- **Stance**: Risk-averse, capital preservation focused
-- **Analysis**: Downside protection, worst-case scenarios
-- **Recommendation**: Smaller positions, tight stops
-
-**Neutral Debator**
-- **Stance**: Balanced risk-reward assessment
-- **Analysis**: Expected value, risk-adjusted returns
-- **Recommendation**: Moderate positions, standard risk parameters
-
-**Aggressive Debator**
-- **Stance**: Return-maximizing, higher risk tolerance
-- **Analysis**: Upside potential, asymmetric opportunities
-- **Recommendation**: Larger positions, wider stops
-
-**Risk Manager**
-- **Role**: Facilitate risk debate, determine final risk parameters
-- **Process**:
-  1. Present investment thesis from researcher team
-  2. Conduct risk assessment debate
-  3. Synthesize risk perspectives
-  4. Set position size, stop loss, take profit levels
-
-### Team Output
-
-Risk-adjusted position sizing with entry/exit parameters
+Risk assessment debate (Conservative, Neutral, Aggressive debators + Risk Manager).
 
 ---
 
 ## Team 4: Trader Agent
 
-### Overview
-
 **Status**: ⏳ Planned
 
-**Purpose**: Execute final trading analyzer based on all team inputs
-
-**Responsibilities**:
-- Review all team outputs (analyst, researcher, risk management)
-- Make final go/no-go analyzer
-- Determine exact position sizing within risk parameters
-- Generate order execution strategy
-- Monitor position post-entry
-
-**analyzer Framework**:
-```python
-if analyst_score > threshold and investment_thesis == "BUY":
-    if risk_parameters.acceptable:
-        execute_trade(
-            symbol=symbol,
-            direction=direction,
-            size=risk_parameters.position_size,
-            entry=entry_price,
-            stop_loss=risk_parameters.stop_loss,
-            take_profit=risk_parameters.take_profit
-        )
-```
-
----
-
-## Workflow & Communication
-
-### Complete System Flow
-
-```
-╔═════════════════════════════════════════════════════════════════════╗
-║             SYSTEM 1: DATA PROCESSING PIPELINE                      ║
-╚═════════════════════════════════════════════════════════════════════╝
-
-1. Stage 1: Data Retrieval (Parallel)
-   - 5 agents collect raw data simultaneously
-   ↓
-2. Stage 2: Normalization
-   - Standardize formats and timestamps
-   ↓
-3. Stage 3: Feature Extraction
-   - LLM/Neural AI extracts patterns
-   ↓
-   Feature Vectors Output
-
-╔═════════════════════════════════════════════════════════════════════╗
-║             SYSTEM 2: analyzer-MAKING SYSTEM                        ║
-╚═════════════════════════════════════════════════════════════════════╝
-
-4. Team 1: Analyst Team (Parallel)
-   - All 4 analysts run simultaneously
-   - Consolidate findings
-   ↓
-5. Team 2: Researcher Team (Sequential Debate)
-   - Bull/Bear debate in rounds
-   - Research Manager synthesizes
-   ↓
-6. Team 3: Risk Management Team (Sequential Debate)
-   - Conservative/Neutral/Aggressive debate
-   - Risk Manager sets parameters
-   ↓
-7. Team 4: Trader Agent (Final analyzer)
-   - Review all inputs
-   - Execute or reject trade
-   ↓
-   Trading Actions
-```
-
-### Communication Pattern
-
-**Framework**: LangGraph for state management and workflow orchestration
-
-**State Object**:
-```python
-@dataclass
-class TradingAgentState:
-    # Input from System 1 (Data Processing Pipeline)
-    portfolio: List[str]
-    feature_vectors: Dict[str, FeatureVector]  # From Stage 3
-
-    # Team 1 Output (Analyst Team)
-    analyst_reports: Dict[str, AnalystReport]
-
-    # Team 2 Output (Researcher Team)
-    investment_thesis: InvestmentThesis
-    bull_case: str
-    bear_case: str
-    confidence: float
-
-    # Team 3 Output (Risk Management Team)
-    risk_parameters: RiskParameters
-    position_size: float
-    stop_loss: float
-    take_profit: float
-
-    # Team 4 Output (Trader Agent)
-    trading_decision: TradingAnalyzer
-    execution_plan: ExecutionPlan
-```
-
-### System Interfaces
-
-**Data Processing Pipeline → analyzer-Making System**:
-```python
-# Stage 3 Output → Team 1 Input (Feature Vectors)
-{
-    "portfolio_id": "...",
-    "symbols": ["AAPL", "TSLA"],
-    "features": {
-        "AAPL": {
-            "company_health_score": 0.85,
-            "investor_sentiment_score": 0.72,
-            "technical_momentum_score": 0.68,
-            "macro_alignment_score": 0.55,
-            "risk_score": 0.33,
-            # ... extracted features
-        }
-    },
-    "metadata": {...}
-}
-```
-
-**analyzer-Making System → Trading Execution**:
-```python
-{
-    "trading_decisions": [
-        {
-            "symbol": "AAPL",
-            "action": "BUY",
-            "position_size": 100,
-            "entry_price": 185.50,
-            "stop_loss": 178.00,
-            "take_profit": 198.00,
-            "confidence": 0.78,
-            "rationale": "Strong fundamentals + bullish technical setup..."
-        }
-    ]
-}
-```
-
----
-
-## Tauric Research Integration
-
-This architecture is inspired by [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents).
-
-### Clear Separation
-
-```
-SYSTEM 1: DATA PROCESSING PIPELINE    SYSTEM 2: analyzer-MAKING SYSTEM
-├─ Stage 1: Get the data              ├─ Team 1: Analyze data
-├─ Stage 2: Normalize data            ├─ Team 2: Debate thesis
-├─ Stage 3: Extract features          ├─ Team 3: Size positions
-                ↓                      └─ Team 4: Execute trades
-        Feature vectors
-```
-
-### What We Integrated from Tauric ✅
-
-**Data Processing Pipeline (System 1)**:
-- ✅ Technical indicator calculation tools (Stage 1)
-- ✅ Fundamental metrics retrieval patterns (Stage 1)
-- ✅ Stock data utility functions (`stage_1/agents/utils/stock_tools.py`)
-- ✅ Multi-source data collection approach
-
-**analyzer-Making System (System 2)** ⏳:
-- Multi-agent debate patterns (bull/bear, risk debators)
-- Hierarchical team structure (analysts → researchers → risk → trader)
-- LangGraph workflow orchestration
-- Configurable debate rounds
-
-### Tauric Agent Mapping
-
-| Tauric Agent | Event Horizon Equivalent | System/Team |
-|--------------|-------------------------|-------------|
-| fundamentals_analyst | Fundamentals Analyst | System 2 - Team 1 |
-| market_analyst | Market Analyst | System 2 - Team 1 |
-| news_analyst | News Analyst | System 2 - Team 1 |
-| social_media_analyst | Social Media Analyst | System 2 - Team 1 |
-| bull_researcher | Bull Researcher | System 2 - Team 2 |
-| bear_researcher | Bear Researcher | System 2 - Team 2 |
-| research_manager | Research Manager | System 2 - Team 2 |
-| safe_debator | Conservative Debator | System 2 - Team 3 |
-| neutral_debator | Neutral Debator | System 2 - Team 3 |
-| risky_debator | Aggressive Debator | System 2 - Team 3 |
-| risk_manager | Risk Manager | System 2 - Team 3 |
-| trader | Trader Agent | System 2 - Team 4 |
-
-**Reference Location**: `core_refs/TradingAgents/`
-
----
-
-## Implementation Status
-
-### System 1: Data Processing Pipeline
-
-#### Phase 1: Stage 1 Implementation ✅ COMPLETED
-- ✅ Stage 1 data retrieval agents implemented
-- ✅ Tauric repository cloned for reference
-- ✅ 5 agents running in parallel (candlestick, earnings, news, technical, fundamentals)
-- ✅ Orchestrator with ThreadPoolExecutor
-
-#### Phase 2: Stage 2 Implementation ⏳ PLANNED
-- [ ] Stage 2 normalization pipeline
-- [ ] Time synchronization across data sources
-- [ ] Symbol mapping and standardization
-- [ ] Unified tabular schema
-
-#### Phase 3: Stage 3 Implementation ⏳ PLANNED
-- [ ] Stage 3 feature extraction with LLM/Neural AI
-- [ ] Pattern recognition in time-series data
-- [ ] Embedding generation for text data
-- [ ] Predictive signal discovery
-
-### System 2: analyzer-Making System
-
-#### Phase 4: Team 1 Implementation ⏳ PLANNED
-- [ ] Implement 4 analyst agents (fundamentals, market, news, social)
-- [ ] Create analyst orchestrator for parallel execution
-- [ ] Define analyst report schema
-- [ ] Test analyst team on sample data
-
-#### Phase 5: Team 2 Implementation ⏳ PLANNED
-- [ ] Implement bull/bear researchers
-- [ ] Implement research manager with debate logic
-- [ ] Create investment thesis schema
-- [ ] Test multi-round debate mechanism
-
-#### Phase 6: Team 3 Implementation ⏳ PLANNED
-- [ ] Implement 3 risk debators (conservative, neutral, aggressive)
-- [ ] Implement risk manager with debate orchestration
-- [ ] Define risk parameters schema
-- [ ] Test position sizing logic
-
-#### Phase 7: Team 4 Implementation ⏳ PLANNED
-- [ ] Implement trader agent analyzer logic
-- [ ] Create execution plan generator
-- [ ] Integrate with all upstream teams
-- [ ] End-to-end system testing
-
-#### Phase 8: System Integration ⏳ PLANNED
-- [ ] Design state machine for workflow
-- [ ] Implement LangGraph orchestration
-- [ ] Add checkpointing and retry logic
-- [ ] Performance optimization
+Final decision and execution based on all upstream outputs.
 
 ---
 
@@ -863,24 +458,26 @@ The Thinking Agent system adds **ReAct-style iterative reasoning** to custom age
 ### Architecture
 
 ```
-Portfolio → Thinking Agent → [Iteration Loop] → Final Output
-                ↓
-           ┌────────────────────────────────────────┐
-           │  1. Analyze input (portfolio or data)  │
-           │  2. Decide: Need more data?            │
-           │     → Yes: Call tool (candlestick,    │
-           │            earnings, news, etc.)       │
-           │     → No: Generate analysis            │
-           │  3. Loop until max iterations          │
-           └────────────────────────────────────────┘
+Portfolio -> Thinking Agent -> [Iteration Loop] -> Final Output
+                |
+           +--------------------------------------------+
+           |  1. Analyze input (portfolio or data)       |
+           |  2. Decide: Need more data?                 |
+           |     -> Yes: Call tool (candlestick,         |
+           |            earnings, news, technical,       |
+           |            fundamentals, web_search)        |
+           |     -> No: Generate analysis                |
+           |  3. Loop until max iterations               |
+           +--------------------------------------------+
 ```
 
 ### Key Features
 
 - **Iterative Reasoning**: Agent thinks step-by-step about what data it needs
-- **Tool Calling**: Can request data from built-in agents (candlestick, earnings, news, technical, fundamentals)
-- **Custom Data Agent Suggestions**: If agent needs data that doesn't exist, it can suggest creating a new data agent
-- **Thinking Transparency**: All reasoning steps are captured and can be displayed in UI
+- **6 Tools**: candlestick, earnings, news, technical, fundamentals, web_search
+- **Single-Shot Tool Discovery**: `discover_required_tools()` identifies all needed tools at once
+- **Custom Data Agent Creation**: Can suggest exotic data agents (scoped to web_search tool)
+- **Thinking Transparency**: All reasoning steps captured for UI display
 - **Configurable Iterations**: Max iterations (1-10) prevent infinite loops
 
 ### API Endpoint
@@ -891,13 +488,130 @@ POST /agents/think
   "stocks": ["AAPL", "TSLA"],
   "system_prompt": "You are a dividend-focused analyst...",
   "max_iterations": 5,
-  "available_tools": ["candlestick", "earnings", "news", "technical", "fundamentals"]
+  "available_tools": ["candlestick", "earnings", "news", "technical", "fundamentals", "web_search"]
 }
 ```
 
 ### Documentation
 
 See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentation and usage examples.
+
+---
+
+## Observability (Opik)
+
+Opik tracing is integrated across Stage 3 and the Bull-Bear Analyzer with a safe fallback pattern:
+
+```python
+try:
+    from opik import track
+except ImportError:
+    track = lambda **kw: lambda fn: fn  # no-op when opik not installed
+```
+
+**Traced operations**:
+- Stage 3: `stage3_pipeline`, `extract_features`, `llm_extraction_call`
+- Bull-Bear: `bull_bear_debate_pipeline`, `symbol_debate`, `bull_research_argument`, `bear_research_argument`, `synthesize_thesis`, and individual LLM calls
+
+---
+
+## Workflow & Communication
+
+### Complete System Flow
+
+```
+1. Stage 1: Data Retrieval (Parallel)
+   - 5 agents collect raw data simultaneously
+   |
+2. Stage 2: Normalization (Sequential per symbol)
+   - Unify data, compute quality scores
+   |
+3. Stage 3: Feature Extraction (LLM per symbol)
+   - Extract structured insights via Mistral/vLLM
+   |
+   SymbolFeatures Output
+   |
+4. Bull-Bear Analyzer (Sequential per symbol)
+   - Bull argument -> Bear rebuttal -> Manager synthesis
+   |
+   InvestmentThesis Output
+```
+
+### Communication Pattern
+
+**Framework**: FastAPI + custom orchestration (no LangGraph dependency)
+
+The FastAPI app (`event_horizon/thinking-multi-agent/app/main.py`) serves as the primary entry point. All data flows through REST endpoints, with the services layer coordinating between the data pipeline and analyzer system.
+
+---
+
+## Implementation Status
+
+### System 1: Data Processing Pipeline
+
+#### Phase 1: Stage 1 Implementation ✅ COMPLETED
+- ✅ 5 data retrieval agents running in parallel
+- ✅ Orchestrator with ThreadPoolExecutor (5 workers)
+- ✅ Tavily/Exa news search (replaced NewsAPI)
+- ✅ Services: ChartDataClient, FinancialDataClient, news_search_client
+
+#### Phase 2: Stage 2 Implementation ✅ COMPLETED
+- ✅ DataNormalizer: unify 6 data categories per symbol
+- ✅ Quality scoring (0-1) with symbol categorization
+- ✅ Stage2Orchestrator: sequential per-symbol processing
+
+#### Phase 3: Stage 3 Implementation ✅ COMPLETED
+- ✅ LLMFeatureExtractor: structured JSON output via Mistral/vLLM
+- ✅ SymbolFeatures: sentiment, signals, patterns, risks, opportunities
+- ✅ Opik tracing integration
+- ✅ Token usage and timing metrics
+
+### System 2: Analyzer System
+
+#### Phase 4: Bull-Bear Analyzer ✅ COMPLETED
+- ✅ BullResearcher, BearResearcher, ResearchManager agents
+- ✅ 3-step debate: bull -> bear rebuttal -> manager synthesis
+- ✅ Auto-data-fetch for missing symbol features
+- ✅ Opik tracing for full debate pipeline
+- ✅ InvestmentThesis with probability-weighted scenarios
+
+#### Phase 5: Team 1 - Analyst Team ⏳ PLANNED
+- [ ] Implement 4 analyst agents (fundamentals, market, news, social)
+- [ ] Create analyst orchestrator for parallel execution
+
+#### Phase 6: Team 3 - Risk Management ⏳ PLANNED
+- [ ] Implement 3 risk debators (conservative, neutral, aggressive)
+- [ ] Implement risk manager with debate orchestration
+
+#### Phase 7: Team 4 - Trader Agent ⏳ PLANNED
+- [ ] Implement trader agent decision logic
+- [ ] Create execution plan generator
+- [ ] End-to-end system integration
+
+### FastAPI Application ✅ COMPLETED
+- ✅ v3.0.0 with 20+ endpoints
+- ✅ Agent CRUD with JSON persistence
+- ✅ Thinking Agent (ReAct-style iterative reasoning)
+- ✅ Tool discovery and custom agent creation
+- ✅ Streaming analysis (SSE)
+- ✅ Web search integration (Tavily + Exa)
+
+---
+
+## Tauric Research Integration
+
+This architecture is inspired by [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents).
+
+### What We Integrated from Tauric ✅
+
+**Data Processing Pipeline (System 1)**:
+- ✅ Technical indicator calculation tools (Stage 1)
+- ✅ Fundamental metrics retrieval patterns (Stage 1)
+- ✅ Stock data utility functions (`stage_1/agents/utils/stock_tools.py`)
+- ✅ Multi-source data collection approach
+
+**Analyzer System (System 2)**:
+- ✅ Bull/Bear debate pattern (implemented as Bull-Bear Analyzer)
 
 ---
 
@@ -920,8 +634,8 @@ See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentati
 
 ## Key Principles
 
-1. **Two-System Architecture**: Data Processing Pipeline (System 1) and analyzer-Making System (System 2) are separate but connected
-2. **Separation of Concerns**: Data transformation ≠ Trading decisions
+1. **Two-System Architecture**: Data Processing Pipeline (System 1) and Analyzer System (System 2) are separate but connected
+2. **Separation of Concerns**: Data transformation != Trading decisions
 3. **Multi-Perspective Analysis**: Debate and consensus for robust decisions
 4. **Risk-Aware**: Explicit risk management team prevents reckless trades
 5. **Inspired by Research**: Leverages proven patterns from Tauric framework
@@ -931,12 +645,11 @@ See [Thinking Agent Guide](../guides/thinking-agent.md) for full API documentati
 
 ## References
 
-- **Quick Start**: `QUICKSTART_STAGE1.md`
-- **Tauric Integration**: `stage_1/TAURIC_INTEGRATION.md`
-- **Update Summary**: `STAGE1_UPDATE_SUMMARY.md`
-- **Tauric Codebase**: `core_refs/TradingAgents/`
+- **Thinking Agent Guide**: `docs/guides/thinking-agent.md`
+- **Stage 1 Guide**: `docs/guides/stage-1-guide.md`
+- **System Architecture**: `docs/architecture/system-architecture.md`
 
 ---
 
-**Version**: 1.0.0
-**Last Updated**: 2026-01-25
+**Version**: 3.0.0
+**Last Updated**: 2026-02-10
