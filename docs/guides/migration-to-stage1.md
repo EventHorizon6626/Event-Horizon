@@ -1,46 +1,56 @@
 # Migration Guide: Moving to Stage 1 Architecture
 
-This guide helps you migrate from the old agent system to the new Stage 1 architecture.
+This guide documents the migration from the old agent system to the Stage 1 architecture.
+
+> **Note**: Stages 2 and 3 are now also implemented. The full pipeline runs Stage 1 (data retrieval) -> Stage 2 (normalization) -> Stage 3 (LLM feature extraction). The primary entry point is now the FastAPI app on port 8030.
 
 ## What Changed?
 
 ### Old Structure (Before Stage 1)
 ```
 agents/
-├── base_agent.py
-├── news_agent.py
-├── report_agent.py
-└── chart_agent.py
+|-- base_agent.py
+|-- news_agent.py
+|-- report_agent.py
++-- chart_agent.py
 
 main.py - Sequential execution
 ```
 
-### New Structure (Stage 1)
+### New Structure (Current)
 ```
-stage_1/
-├── agents/
-│   ├── base_agent.py
-│   ├── news_agent.py
-│   ├── earnings_agent.py
-│   └── candlestick_agent.py
-├── models/
-│   └── schemas.py
-└── orchestrator/
-    └── stage_1_orchestrator.py
-
-main_stage1.py - Parallel execution
+event_horizon/
+|-- data_pipeline/
+|   |-- stage_1/              # Data Retrieval [IMPLEMENTED]
+|   |   |-- agents/           # 5 agents (candlestick, earnings, news, technical, fundamentals)
+|   |   |-- services/         # API clients (yfinance, Tavily, Exa, Massive)
+|   |   |-- models/           # Output schemas
+|   |   +-- orchestrator/     # Parallel execution
+|   |-- stage_2/              # Normalization [IMPLEMENTED]
+|   |   |-- normalizer/       # DataNormalizer, quality scoring
+|   |   +-- orchestrator/
+|   +-- stage_3/              # Feature Extraction [IMPLEMENTED]
+|       |-- extractors/       # LLMFeatureExtractor (Opik-traced)
+|       +-- orchestrator/
+|-- analyzer_system/
+|   +-- bull_bear_analyzer/   # 3-agent debate [IMPLEMENTED]
++-- thinking-multi-agent/
+    +-- app/                  # FastAPI app (port 8030)
 ```
 
 ## Key Improvements
 
-| Feature | Old System | Stage 1 |
-|---------|-----------|---------|
-| **Execution** | Sequential | Parallel |
-| **Speed** | ~15s for 3 agents | ~7s for 3 agents |
-| **Architecture** | Monolithic | Stageed (3-stage vision) |
-| **Data Format** | Mixed | Structured schemas |
+| Feature | Old System | Current System |
+|---------|-----------|----------------|
+| **Execution** | Sequential | Parallel (Stage 1), Pipeline (1->2->3) |
+| **Speed** | ~15s for 3 agents | ~7s for 5 agents (parallel) |
+| **Architecture** | Monolithic | 3-stage pipeline + analyzer system |
+| **Data Format** | Mixed | Structured schemas (dataclasses) |
 | **Error Handling** | All-or-nothing | Partial failures OK |
-| **Scalability** | Limited | Designed for 10+ agents |
+| **Entry Point** | `main.py` script | FastAPI app (REST API) |
+| **News Source** | NewsAPI.org | Tavily (primary), Exa (fallback) |
+| **LLM** | None | Mistral via vLLM (Stage 3, Bull-Bear) |
+| **Observability** | None | Opik tracing |
 
 ## Migration Steps
 
@@ -55,274 +65,71 @@ from agents.chart_agent import ChartDataAgent
 
 **After:**
 ```python
-from stage_1.agents import NewsAgent, EarningsAgent, CandlestickAgent
+from event_horizon.data_pipeline.stage_1.agents.news_agent import NewsAgent
+from event_horizon.data_pipeline.stage_1.agents.earnings_agent import EarningsAgent
+from event_horizon.data_pipeline.stage_1.agents.candlestick_agent import CandlestickAgent
 # Or use the orchestrator
-from stage_1 import Stage1Orchestrator
+from event_horizon.data_pipeline.stage_1.orchestrator.stage_1_orchestrator import Stage1Orchestrator
 ```
 
-### Step 2: Replace Sequential Execution
+### Step 2: Use FastAPI Endpoints (Recommended)
 
-**Before:**
-```python
-# Sequential - slow
-news_agent = NewsAgent(config=news_config)
-news_result = news_agent.execute(portfolio)
+Instead of running agents directly in Python, use the FastAPI API:
 
-report_agent = ReportAnalysisAgent(config=report_config)
-report_result = report_agent.execute(portfolio)
+```bash
+# Run all Stage 1 agents
+curl -X POST http://localhost:8030/api/v1/analyze-portfolio \
+  -H "Content-Type: application/json" \
+  -d '{"portfolio": ["AAPL", "TSLA", "NVDA"]}'
 
-chart_agent = ChartDataAgent(config=chart_config)
-chart_result = chart_agent.execute(portfolio)
-```
-
-**After:**
-```python
-# Parallel - fast
-orchestrator = Stage1Orchestrator(config={
-    "enabled_agents": ["news", "earnings", "candlestick"],
-    "agent_configs": {
-        "news": news_config,
-        "earnings": report_config,
-        "candlestick": chart_config
-    }
-})
-
-result = orchestrator.execute(portfolio)
-stage1_output = result["stage1_output"]
+# Run individual agents
+curl -X POST http://localhost:8030/agents/candlestick \
+  -H "Content-Type: application/json" \
+  -d '{"stocks": ["AAPL"]}'
 ```
 
 ### Step 3: Update Agent Names
 
 | Old Name | New Name | Location |
 |----------|----------|----------|
-| `ChartDataAgent` | `CandlestickAgent` | `stage_1.agents` |
-| `ReportAnalysisAgent` | `EarningsAgent` | `stage_1.agents` |
-| `NewsAgent` | `NewsAgent` | `stage_1.agents` (same name) |
+| `ChartDataAgent` | `CandlestickAgent` | `event_horizon.data_pipeline.stage_1.agents` |
+| `ReportAnalysisAgent` | `EarningsAgent` | `event_horizon.data_pipeline.stage_1.agents` |
+| `NewsAgent` | `NewsAgent` | `event_horizon.data_pipeline.stage_1.agents` (same name, new data source) |
+| N/A (new) | `TechnicalAgent` | `event_horizon.data_pipeline.stage_1.agents` |
+| N/A (new) | `FundamentalsAgent` | `event_horizon.data_pipeline.stage_1.agents` |
 
 ### Step 4: Update Data Access
 
 **Before:**
 ```python
-# Old format - agent-specific result structure
 news_result = news_agent.execute(portfolio)
 articles = news_result["result"]["news_by_stock"]
-
-chart_result = chart_agent.execute(portfolio)
-candles = chart_result["result"]["chart_data"]
 ```
 
-**After:**
+**After (via orchestrator):**
 ```python
-# New format - unified Stage1Output
 result = orchestrator.execute(portfolio)
 stage1_output = result["stage1_output"]
 
-# Access by symbol
 for symbol in stage1_output.symbols:
     news_data = stage1_output.news_data[symbol]
     chart_data = stage1_output.chart_data[symbol]
     earnings_data = stage1_output.earnings_data[symbol]
-
-    print(f"{symbol}:")
-    print(f"  Articles: {news_data.total_articles}")
-    print(f"  Candles: {len(chart_data.candles)}")
 ```
 
-### Step 5: Update Error Handling
+## Next Steps
 
-**Before:**
-```python
-try:
-    news_result = news_agent.execute(portfolio)
-    if news_result["status"] == "failed":
-        print(f"Error: {news_result['error']}")
-except Exception as e:
-    print(f"Failed: {e}")
-```
+Beyond Stage 1, the full pipeline is now available:
 
-**After:**
-```python
-result = orchestrator.execute(portfolio)
+1. **Stage 2** (Normalization): Unifies heterogeneous Stage 1 data into `NormalizedSymbolData` with quality scoring
+2. **Stage 3** (Feature Extraction): LLM extracts structured `SymbolFeatures` per symbol
+3. **Bull-Bear Analyzer**: 3-agent debate generating `InvestmentThesis` per symbol
+4. **Thinking Agent**: ReAct-style iterative reasoning with autonomous tool selection
 
-# Graceful partial failures
-if result["status"] == "partial_success":
-    print("Some agents succeeded, some failed")
+All accessible via the FastAPI app at `http://localhost:8030`.
 
-# Check individual data
-for symbol, data in result["stage1_output"].news_data.items():
-    if data.error:
-        print(f"{symbol} news failed: {data.error}")
-    else:
-        print(f"{symbol}: {data.total_articles} articles")
-```
+## See Also
 
-## Backward Compatibility
-
-The old `agents/` directory is maintained for backward compatibility:
-
-```python
-# Old code still works
-from agents.news_agent import NewsAgent
-news_agent = NewsAgent()
-result = news_agent.execute(portfolio)
-```
-
-However, **new code should use Stage 1** for:
-- Better performance (parallel execution)
-- Structured data schemas
-- Future-proof architecture
-
-## Configuration Changes
-
-### Old Config (config.yaml)
-
-```yaml
-agents:
-  news_agent:
-    enabled: true
-    config:
-      max_articles_per_stock: 20
-      days_back: 7
-
-  report_agent:
-    enabled: true
-    config:
-      include_financials: true
-```
-
-### New Config (Stage 1)
-
-```python
-stage1_config = {
-    "enabled_agents": ["news", "earnings", "candlestick"],
-    "max_workers": 3,
-    "agent_configs": {
-        "news": {
-            "max_articles_per_stock": 20,
-            "days_back": 7
-        },
-        "earnings": {
-            "include_financials": True
-        },
-        "candlestick": {
-            "period": "1mo",
-            "interval": "1d"
-        }
-    }
-}
-```
-
-## Running Examples
-
-### Old Way
-
-```bash
-# Sequential execution
-python main.py
-```
-
-### New Way
-
-```bash
-# Parallel Stage 1 execution
-python main_stage1.py
-```
-
-## Common Pitfalls
-
-### 1. Agent Name Confusion
-
-❌ **Wrong:**
-```python
-from stage_1.agents import ChartDataAgent  # Old name
-```
-
-✅ **Correct:**
-```python
-from stage_1.agents import CandlestickAgent  # New name
-```
-
-### 2. Direct Agent Instantiation
-
-❌ **Not Recommended:**
-```python
-# Still works but doesn't use parallel execution
-agent = CandlestickAgent()
-result = agent.execute(portfolio)
-```
-
-✅ **Recommended:**
-```python
-# Use orchestrator for parallel execution
-orchestrator = Stage1Orchestrator()
-result = orchestrator.execute(portfolio)
-```
-
-### 3. Result Format Assumptions
-
-❌ **Wrong:**
-```python
-# Old result format
-articles = result["result"]["news_by_stock"]
-```
-
-✅ **Correct:**
-```python
-# New Stage1Output format
-stage1_output = result["stage1_output"]
-articles = stage1_output.news_data
-```
-
-## Performance Comparison
-
-### Benchmark: 4 Stocks, 3 Agents
-
-| Metric | Old System | Stage 1 | Improvement |
-|--------|-----------|---------|-------------|
-| **Total Time** | 15.2s | 7.1s | **2.1x faster** |
-| **News Agent** | 3.1s | 3.1s | Same |
-| **Earnings Agent** | 7.2s | 7.1s | Same |
-| **Candlestick Agent** | 4.9s | 5.0s | Same |
-| **Execution Pattern** | Sequential | Parallel | - |
-
-Time savings come from parallel execution, not individual agent speed.
-
-## Feature Comparison
-
-| Feature | Old System | Stage 1 | Notes |
-|---------|-----------|---------|-------|
-| Parallel execution | ❌ | ✅ | ThreadPoolExecutor |
-| Structured schemas | ❌ | ✅ | Dataclass models |
-| Partial failures | ❌ | ✅ | Continue on error |
-| Unified output | ❌ | ✅ | Stage1Output |
-| Future-ready | ❌ | ✅ | Supports Stage 2/3 |
-| Config flexibility | ⚠️ | ✅ | Per-agent config |
-| Error tracking | ⚠️ | ✅ | Per-agent, per-symbol |
-
-## Timeline
-
-- **Now**: Both systems work (backward compatible)
-- **Recommended**: Start using Stage 1 for new code
-- **Future**: Stage 2 and Stage 3 will build on Stage 1
-
-## Need Help?
-
-- See [Stage 1 Guide](./stage-1-guide.md) for detailed documentation
-- Check [examples/](../../stage_1/examples/) for sample code
-- Review [main_stage1.py](../../main_stage1.py) for working example
-
-## Summary
-
-**To migrate to Stage 1:**
-
-1. Replace `from agents` with `from stage_1.agents`
-2. Use `Stage1Orchestrator` instead of sequential agent calls
-3. Update result access to use `Stage1Output` structure
-4. Rename `ChartDataAgent` → `CandlestickAgent`
-5. Rename `ReportAnalysisAgent` → `EarningsAgent`
-
-**Benefits:**
-- 2x faster execution (parallel agents)
-- Better error handling (partial failures)
-- Structured data schemas
-- Future-proof for Stage 2 and Stage 3
+- [Stage 1 Guide](./stage-1-guide.md)
+- [Usage Guide](./usage.md)
+- [Multi-Agent Architecture](../architecture/multi-agent-architecture.md)

@@ -73,7 +73,7 @@ INFO - Using Massive.com API for chart data
 ## Step 4: Test
 
 ```bash
-curl -X POST http://localhost:5000/api/chart \
+curl -X POST http://localhost:8030/agents/candlestick \
   -H "Content-Type: application/json" \
   -d '{"stocks": ["AAPL"]}'
 ```
@@ -248,21 +248,21 @@ print(client.test_connection())
 
 ### Intraday Trading (1-minute candles)
 ```bash
-curl -X POST http://localhost:5000/api/chart \
+curl -X POST http://localhost:8030/agents/candlestick \
   -H "Content-Type: application/json" \
   -d '{"stocks": ["AAPL"], "period": "1d", "interval": "1m"}'
 ```
 
 ### Long-term Analysis (weekly candles)
 ```bash
-curl -X POST http://localhost:5000/api/chart \
+curl -X POST http://localhost:8030/agents/candlestick \
   -H "Content-Type: application/json" \
   -d '{"stocks": ["GOOGL"], "period": "5y", "interval": "1wk"}'
 ```
 
 ### Multiple Stocks
 ```bash
-curl -X POST http://localhost:5000/api/chart \
+curl -X POST http://localhost:8030/agents/candlestick \
   -H "Content-Type: application/json" \
   -d '{"stocks": ["AAPL", "GOOGL", "MSFT"], "period": "1mo", "interval": "1d"}'
 ```

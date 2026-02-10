@@ -9,17 +9,20 @@ Deploy AI service using Docker with localhost-only binding.
 ### 1. Configure Environment
 
 ```bash
-cd ~/EventHorizon/Event-Horizon-AI
+cd event_horizon/thinking-multi-agent
 
 # Create .env file
 cp .env.example .env
 nano .env
 ```
 
-Set your NewsAPI key:
+Set your configuration:
 ```bash
-NEWS_API_KEY=your_actual_newsapi_key_here
-LOG_LEVEL=INFO
+LLM_BASE_URL=http://host.docker.internal:8000
+LLM_MODEL=mistralai/Ministral-3-14B-Reasoning-2512
+TAVILY_API_KEY=your_tavily_key
+AGENTS_FILE=/data/agents.json
+LOG_LEVEL=info
 ```
 
 ### 2. Build and Start
@@ -42,15 +45,17 @@ docker ps | grep event-horizon
 docker logs event-horizon-ai
 
 # Test API (from VPS)
-curl http://localhost:5000/health
+curl http://localhost:8030/health
 ```
 
 Expected response:
 ```json
 {
   "status": "healthy",
-  "timestamp": "2026-01-17T...",
-  "service": "event-horizon-ai"
+  "model": "mistralai/Ministral-3-14B-Reasoning-2512",
+  "agents_count": 5,
+  "llm_backend_status": "connected",
+  "timestamp": "2026-02-10T..."
 }
 ```
 
@@ -58,8 +63,8 @@ Expected response:
 
 ```bash
 # From outside VPS - should NOT work
-curl http://178.18.255.19:5000/health
-# Connection refused - This is correct! ✅
+curl http://178.18.255.19:8030/health
+# Connection refused - This is correct!
 ```
 
 ---
@@ -101,9 +106,6 @@ docker logs -f --timestamps event-horizon-ai
 # Check running containers
 docker ps
 
-# Check all containers
-docker ps -a
-
 # Check resource usage
 docker stats event-horizon-ai
 ```
@@ -111,31 +113,10 @@ docker stats event-horizon-ai
 ### Rebuild After Code Changes
 
 ```bash
-# Pull latest code
-cd ~/EventHorizon/Event-Horizon-AI
+cd ~/EventHorizon/Event-Horizon
 git pull origin main
 
 # Rebuild and restart
-docker-compose up -d --build
-```
-
----
-
-## Update Workflow
-
-When you push code changes:
-
-**Local machine:**
-```bash
-git add .
-git commit -m "Update AI service"
-git push origin main
-```
-
-**VPS:**
-```bash
-cd ~/EventHorizon/Event-Horizon-AI
-git pull origin main
 docker-compose up -d --build
 ```
 
@@ -145,14 +126,14 @@ docker-compose up -d --build
 
 ```
 Backend API (your Node.js app)
-    ↓ HTTP
-http://localhost:5000 ← Docker container (event-horizon-ai)
+    | HTTP
+http://localhost:8030  <--  Docker container (event-horizon-ai)
 ```
 
 The Docker container:
-- Binds to `127.0.0.1:5000` on host
+- Binds to `127.0.0.1:8030` on host
 - Only accessible from localhost
-- NOT exposed to internet ✅
+- NOT exposed to internet
 
 ---
 
@@ -165,7 +146,7 @@ The Docker container:
 docker logs event-horizon-ai
 
 # Check if port is in use
-sudo lsof -i :5000
+sudo lsof -i :8030
 
 # Remove old container
 docker-compose down
@@ -199,68 +180,11 @@ docker-compose up -d --build --force-recreate
 docker ps | grep event-horizon
 
 # Check health
-docker exec event-horizon-ai curl http://localhost:5000/health
+docker exec event-horizon-ai curl http://localhost:8030/health
 
 # Check logs
 docker logs --tail 50 event-horizon-ai
 ```
-
----
-
-## Production Setup
-
-### Auto-restart on Boot
-
-Docker containers with `restart: unless-stopped` will automatically start on server reboot.
-
-### Monitor with Portainer (Optional)
-
-```bash
-# Install Portainer
-docker run -d -p 9443:9443 --name portainer \
-  --restart=unless-stopped \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
-
-# Access at https://your-vps-ip:9443
-```
-
----
-
-## Cleanup
-
-### Remove Everything
-
-```bash
-# Stop and remove containers
-docker-compose down
-
-# Remove volumes
-docker-compose down -v
-
-# Remove images
-docker rmi event-horizon-ai
-
-# Clean system
-docker system prune -a
-```
-
----
-
-## Comparison: Docker vs Systemd
-
-| Feature | Docker | Systemd |
-|---------|--------|---------|
-| Setup | Easier | More manual |
-| Isolation | Full isolation | Shared system |
-| Dependencies | Self-contained | Needs venv |
-| Updates | Rebuild image | pip install |
-| Logs | `docker logs` | `journalctl` |
-| Portability | Highly portable | System-specific |
-| Resource limits | Built-in | Manual config |
-
-**Recommendation:** Use Docker for cleaner deployment ✅
 
 ---
 
@@ -283,9 +207,9 @@ docker-compose down
 git pull && docker-compose up -d --build
 
 # Test
-curl http://localhost:5000/health
+curl http://localhost:8030/health
 ```
 
 ---
 
-**Docker deployment is now live on localhost:5000** ✅
+**Docker deployment is now live on localhost:8030**

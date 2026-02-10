@@ -1,600 +1,230 @@
 # Event Horizon - Configuration Guide
 
-## Easy Agent Activation/Deactivation
+## Overview
 
-Event Horizon uses `config.yaml` to control which agents run during deployment. This makes it easy to enable/disable agents without changing code.
+Event Horizon is configured primarily through **environment variables** and the **FastAPI app's agent CRUD API**. The system runs as a FastAPI application on port 8030.
 
 ---
 
 ## Quick Start
 
-### 1. View Current Configuration
+### 1. Configure Environment
 
 ```bash
-cat config.yaml
+cd event_horizon/thinking-multi-agent
+cp .env.example .env
+nano .env
 ```
 
-### 2. Enable/Disable Agents
-
-Edit `config.yaml`:
-
-```yaml
-agents:
-  news_agent:
-    enabled: false  # ← Set to true to enable
-
-  report_agent:
-    enabled: true   # ← Set to false to disable
-```
-
-### 3. Run the System
+### 2. Set Required Variables
 
 ```bash
-python main.py
+# LLM Configuration
+LLM_BASE_URL=http://localhost:8000
+LLM_MODEL=mistralai/Ministral-3-14B-Reasoning-2512
+LLM_API_KEY=
+LLM_TIMEOUT=300
+
+# Agent Persistence
+AGENTS_FILE=/tmp/agents.json
+
+# News & Web Search
+TAVILY_API_KEY=your_tavily_key
+EXASEARCH_API_KEY=your_exa_key    # Optional fallback
+
+# Optional
+MASSIVE_API_KEY=your_massive_key
+USE_MASSIVE_API=false
+LOG_LEVEL=info
 ```
 
-The system will automatically run only the enabled agents!
-
----
-
-## Configuration File Structure
-
-### config.yaml
-
-```yaml
-# ==========================================
-# AGENT CONFIGURATION
-# ==========================================
-agents:
-
-  # News Agent - Retrieves financial news
-  news_agent:
-    enabled: false              # true = run, false = skip
-    config:
-      max_articles_per_stock: 5
-      days_back: 7
-      language: "en"
-
-  # Report Agent - Earnings and fund reports
-  report_agent:
-    enabled: true               # true = run, false = skip
-    config:
-      include_financials: true
-      earnings_periods: 4
-      top_holdings: 10
-      download_sec_filings: false  # Future feature
-
-# ==========================================
-# DATA SOURCES
-# ==========================================
-data_sources:
-
-  yfinance:
-    enabled: true
-    description: "Yahoo Finance data (free, parsed)"
-
-  sec_edgar:
-    enabled: false
-    description: "SEC official filings (future feature)"
-
-# ==========================================
-# API KEYS
-# ==========================================
-api_keys:
-  news_api_key: ${NEWS_API_KEY}  # Reads from .env file
-
-# ==========================================
-# OUTPUT SETTINGS
-# ==========================================
-output:
-  save_json: true
-  json_directory: "."
-  pretty_print: true
-
-# ==========================================
-# LOGGING
-# ==========================================
-logging:
-  level: "INFO"      # DEBUG, INFO, WARNING, ERROR
-  save_to_file: true
-```
-
----
-
-## Common Deployment Scenarios
-
-### Scenario 1: Only Report Agent (Current Request)
-
-**Use Case**: You only want earnings/fund reports, no news articles.
-
-**Configuration**:
-```yaml
-agents:
-  news_agent:
-    enabled: false  # ← Disabled
-
-  report_agent:
-    enabled: true   # ← Enabled
-```
-
-**Command**:
-```bash
-python main.py
-```
-
-**Output**:
-```
-======================================================================
- AGENT CONFIGURATION STATUS
-======================================================================
-news_agent          : ❌ DISABLED
-report_agent        : ✅ ENABLED
-
-Enabled Agents: report_agent
-======================================================================
-
-🤖 EXECUTING REPORT AGENT
-📊 Report results: report_results.json
-```
-
----
-
-### Scenario 2: Only News Agent
-
-**Use Case**: You only want news articles, no earnings reports.
-
-**Configuration**:
-```yaml
-agents:
-  news_agent:
-    enabled: true   # ← Enabled
-
-  report_agent:
-    enabled: false  # ← Disabled
-```
-
----
-
-### Scenario 3: Both Agents
-
-**Use Case**: Full analysis with both news and reports.
-
-**Configuration**:
-```yaml
-agents:
-  news_agent:
-    enabled: true   # ← Enabled
-
-  report_agent:
-    enabled: true   # ← Enabled
-```
-
----
-
-### Scenario 4: Development Mode (All Disabled)
-
-**Use Case**: Testing configuration, no agent execution.
-
-**Configuration**:
-```yaml
-agents:
-  news_agent:
-    enabled: false
-
-  report_agent:
-    enabled: false
-```
-
-**Output**:
-```
-❌ No agents enabled in config.yaml
-```
-
----
-
-## Environment-Specific Configurations
-
-### Development Environment
-
-**config.dev.yaml**:
-```yaml
-agents:
-  news_agent:
-    enabled: true
-    config:
-      max_articles_per_stock: 3  # Fewer articles for testing
-      days_back: 3
-
-  report_agent:
-    enabled: true
-    config:
-      earnings_periods: 2  # Less data for faster testing
-
-logging:
-  level: "DEBUG"  # Verbose logging
-```
-
-**Run with**:
-```bash
-python main.py --config config.dev.yaml
-```
-
-### Production Environment
-
-**config.prod.yaml**:
-```yaml
-agents:
-  news_agent:
-    enabled: false  # Disabled in production
-
-  report_agent:
-    enabled: true   # Only report agent in production
-    config:
-      earnings_periods: 8  # More historical data
-
-logging:
-  level: "INFO"  # Less verbose
-  save_to_file: true
-
-output:
-  json_directory: "/var/app/data/results"  # Production path
-```
-
----
-
-## Configuration Priority
-
-The system loads configuration in this order:
-
-1. **config.yaml** - Main configuration file
-2. **Environment Variables** - Override values (e.g., `${NEWS_API_KEY}`)
-3. **.env file** - API keys and secrets
-
-Example:
-```yaml
-api_keys:
-  news_api_key: ${NEWS_API_KEY}  # Reads from environment/env file
-```
-
----
-
-## API Key Management
-
-### Option 1: .env File (Recommended)
-
-**.env**:
-```bash
-NEWS_API_KEY=your_key_here
-```
-
-**config.yaml**:
-```yaml
-api_keys:
-  news_api_key: ${NEWS_API_KEY}
-```
-
-### Option 2: Environment Variable
+### 3. Start the App
 
 ```bash
-export NEWS_API_KEY=your_key_here
-python main.py
-```
-
-### Option 3: Direct in config.yaml (Not Recommended)
-
-```yaml
-api_keys:
-  news_api_key: "abc123xyz"  # Don't commit this to git!
+uvicorn app.main:app --host 0.0.0.0 --port 8030
 ```
 
 ---
 
-## Changing Agent Configuration
+## Environment Variables Reference
 
-### Adjust Agent Behavior
-
-You can change how agents work without modifying code:
-
-```yaml
-agents:
-  news_agent:
-    enabled: true
-    config:
-      max_articles_per_stock: 20  # ← Increase from 5 to 20
-      days_back: 30               # ← Look back 30 days instead of 7
-      language: "en"
-
-  report_agent:
-    enabled: true
-    config:
-      include_financials: false   # ← Skip detailed financials
-      earnings_periods: 8         # ← Get 8 quarters instead of 4
-      top_holdings: 20            # ← Show top 20 holdings
-```
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `LLM_BASE_URL` | Yes | `http://localhost:8000` | OpenAI-compatible LLM endpoint |
+| `LLM_MODEL` | Yes | `mistralai/Ministral-3-14B-Reasoning-2512` | Model ID |
+| `LLM_API_KEY` | No | `""` | API key for LLM |
+| `LLM_TIMEOUT` | No | `300` | HTTP timeout (seconds) |
+| `AGENTS_FILE` | No | `/data/agents.json` | Path for agent JSON persistence |
+| `TAVILY_API_KEY` | For news/search | - | Tavily search API key |
+| `EXASEARCH_API_KEY` | No | - | Exa search API key (fallback) |
+| `MASSIVE_API_KEY` | No | - | Massive.com chart data key |
+| `USE_MASSIVE_API` | No | `false` | Use Massive.com instead of yfinance |
+| `LOG_LEVEL` | No | `info` | Logging level (debug, info, warning, error) |
 
 ---
 
-## Programmatic Access
+## Agent Configuration
 
-### Using ConfigLoader in Your Code
+### Built-in Agents
+
+The app seeds 5 built-in agents on startup (not deletable):
+
+| Agent | Type | Description |
+|-------|------|-------------|
+| `candlestick` | data | OHLCV price data |
+| `earnings` | data | Financial reports |
+| `news` | data | News articles |
+| `bull-bear-analyzer` | analysis | Bull-bear debate |
+| `risk-manager` | analysis | Risk assessment |
+
+### Creating Custom Agents via API
+
+```bash
+# Create a custom analysis agent
+curl -X POST http://localhost:8030/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "momentum-scanner",
+    "description": "Scans for momentum trading opportunities",
+    "type": "analysis",
+    "system_prompt": "You are a momentum trading analyst. Focus on price trends, volume, and RSI.",
+    "temperature": 0.5,
+    "max_tokens": 2000
+  }'
+
+# List all agents
+curl http://localhost:8030/agents
+
+# Delete a custom agent
+curl -X DELETE http://localhost:8030/agents/{agent_id}
+```
+
+### Agent Types
+
+- **data**: Runs Stage 1 data retrieval (e.g., candlestick, earnings, news)
+- **analysis**: Runs LLM-based analysis with a system prompt
+
+When you call `POST /agents/{id}/analyze`, data agents run the pipeline while analysis agents call the LLM.
+
+---
+
+## Data Agent Configuration
+
+Stage 1 data agents use a default configuration defined in `event_horizon/thinking-multi-agent/app/services/data_agents.py`:
 
 ```python
-from utils.config_loader import ConfigLoader
-
-# Load configuration
-config = ConfigLoader("config.yaml")
-
-# Check if agent is enabled
-if config.is_agent_enabled('report_agent'):
-    # Get agent configuration
-    agent_config = config.get_agent_config('report_agent')
-
-    # Run agent
-    from agents.report_agent import ReportAnalysisAgent
-    agent = ReportAnalysisAgent(config=agent_config)
-    result = agent.execute(portfolio)
+STAGE1_CONFIG = {
+    "enabled_agents": ["candlestick", "earnings", "news", "technical", "fundamentals"],
+    "max_workers": 5,
+    "agent_configs": {
+        "candlestick": {"period": "1mo", "interval": "1d"},
+        "earnings": {"include_financials": True, "earnings_periods": 4},
+        "news": {"max_articles_per_stock": 10, "days_back": 7},
+        "technical": {"indicators": ["SMA", "EMA", "RSI", "MACD"], "look_back_days": 30},
+        "fundamentals": {"include_ratios": True}
+    }
+}
 ```
 
-### ConfigLoader Methods
+These defaults are used when calling individual agent endpoints (e.g., `POST /agents/candlestick`) or the full pipeline (`POST /api/v1/analyze-portfolio`). Override specific settings via request parameters.
 
-```python
-# Agent status
-config.is_agent_enabled('news_agent')  # Returns bool
-config.get_enabled_agents()             # Returns list
-config.get_agent_config('news_agent')  # Returns dict
+---
 
-# Data sources
-config.is_data_source_enabled('yfinance')  # Returns bool
-config.get_data_source_config('yfinance')  # Returns dict
+## LLM Configuration
 
-# API keys
-config.get_api_key('news_api_key')  # Returns string
+The app communicates with any **OpenAI-compatible** LLM endpoint (e.g., vLLM, OpenAI, Ollama).
 
-# Other config
-config.get_logging_config()  # Returns dict
-config.get_output_config()   # Returns dict
-config.get_full_config()     # Returns complete config dict
+### Using vLLM (Local)
 
-# Display status
-config.print_agent_status()  # Prints formatted status
+```bash
+LLM_BASE_URL=http://localhost:8000
+LLM_MODEL=mistralai/Ministral-3-14B-Reasoning-2512
+LLM_API_KEY=
+```
+
+### Using OpenAI
+
+```bash
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4
+LLM_API_KEY=sk-your-key
+```
+
+### Using Ollama
+
+```bash
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=mistral
+LLM_API_KEY=
 ```
 
 ---
 
-## Migration from Old main.py
+## Agent Persistence
 
-### Old Approach (main.py)
+The `AgentStore` persists agents to a JSON file specified by `AGENTS_FILE`.
 
-```python
-# Hard-coded menu
-print("1. News Agent only")
-print("2. Report Agent only")
-print("3. Both agents")
-choice = input("Enter choice: ")
-
-if choice == "1":
-    run_news_agent()
-elif choice == "2":
-    run_report_agent()
-else:
-    run_both_agents()
-```
-
-**Problems:**
-- Need to change code to change behavior
-- Manual selection required
-- Difficult to automate deployments
-
-### New Approach (main.py)
-
-```python
-# Configuration-driven
-config = ConfigLoader("config.yaml")
-
-if config.is_agent_enabled('news_agent'):
-    run_news_agent()
-
-if config.is_agent_enabled('report_agent'):
-    run_report_agent()
-```
-
-**Benefits:**
-- ✅ No code changes needed
-- ✅ No manual input required
-- ✅ Easy to automate
-- ✅ Environment-specific configs
-- ✅ Version control friendly
+- Default: `/data/agents.json` (designed for Docker volumes)
+- For local development: `AGENTS_FILE=/tmp/agents.json`
+- Built-in agents are re-seeded on startup if missing
+- User-created agents persist across restarts
 
 ---
 
-## Best Practices
+## Deployment Scenarios
 
-### 1. Use Environment-Specific Configs
+### Local Development
 
-```
-config.yaml          # Default/base config
-config.dev.yaml      # Development overrides
-config.prod.yaml     # Production overrides
-config.test.yaml     # Testing overrides
-```
-
-### 2. Never Commit API Keys
-
-```yaml
-# ❌ Bad
-api_keys:
-  news_api_key: "abc123xyz"
-
-# ✅ Good
-api_keys:
-  news_api_key: ${NEWS_API_KEY}
+```bash
+AGENTS_FILE=/tmp/agents.json
+LLM_BASE_URL=http://localhost:8000
+LOG_LEVEL=debug
 ```
 
-### 3. Document Configuration Changes
+### Docker
 
-Add comments in config.yaml:
-```yaml
-agents:
-  report_agent:
-    enabled: true
-    config:
-      earnings_periods: 8  # Increased from 4 for better historical analysis
+```bash
+AGENTS_FILE=/data/agents.json    # Mount a volume at /data
+LLM_BASE_URL=http://host.docker.internal:8000
+LOG_LEVEL=info
 ```
 
-### 4. Version Control
+### Production (VPS)
 
-**.gitignore**:
-```
-.env
-config.local.yaml
-*_results.json
+```bash
+AGENTS_FILE=/var/data/agents.json
+LLM_BASE_URL=http://localhost:8000
+LOG_LEVEL=warning
 ```
 
-**Commit**:
-```
-config.yaml           # ✅ Commit
-config.example.yaml   # ✅ Commit
-config.prod.yaml      # ✅ Commit (without secrets)
-.env                  # ❌ Don't commit
-```
+---
+
+## Legacy: config.yaml
+
+The `event_horizon/utils/config_loader.py` utility supports YAML configuration files with `${ENV_VAR}` substitution, but the current FastAPI app does **not** use config.yaml. All configuration is done through environment variables and the agent CRUD API.
 
 ---
 
 ## Troubleshooting
 
-### Error: "Configuration file not found"
+### "AGENTS_FILE not writable"
+Set `AGENTS_FILE` to a writable path (e.g., `/tmp/agents.json` for local dev).
 
-**Problem**: config.yaml doesn't exist
-
-**Solution**:
+### "LLM backend unreachable"
+Check `LLM_BASE_URL` and verify your vLLM/OpenAI server is running:
 ```bash
-# Check if file exists
-ls config.yaml
-
-# Create if missing
-cp config.example.yaml config.yaml
+curl http://localhost:8000/v1/models
 ```
 
-### Error: "No agents enabled"
-
-**Problem**: All agents are disabled
-
-**Solution**: Edit config.yaml and set at least one agent to `enabled: true`
-
-### Error: "yaml.parser.ParserError"
-
-**Problem**: Invalid YAML syntax
-
-**Solution**: Check indentation (use spaces, not tabs)
-
-```yaml
-# ❌ Wrong (mixed indentation)
-agents:
-	news_agent:
-        enabled: true
-
-# ✅ Correct (consistent spaces)
-agents:
-  news_agent:
-    enabled: true
-```
-
-### Error: "NEWS_API_KEY not found"
-
-**Problem**: News Agent enabled but no API key
-
-**Solutions**:
-1. Disable News Agent: `enabled: false`
-2. Add API key to .env file
-3. Set environment variable
+### "News agent returns no results"
+Ensure `TAVILY_API_KEY` is set. Without it, news and web search features won't work.
 
 ---
 
-## Deployment Checklist
+## Best Practices
 
-### Pre-Deployment
-
-- [ ] Set correct agents to `enabled: true/false`
-- [ ] Configure agent parameters for production
-- [ ] Set logging level appropriately
-- [ ] Configure output directory
-- [ ] Verify API keys in environment
-- [ ] Test with sample portfolio
-- [ ] Check disk space for JSON output
-
-### Production Deployment
-
-```bash
-# 1. Copy production config
-cp config.prod.yaml config.yaml
-
-# 2. Set environment variables
-export NEWS_API_KEY=your_production_key
-
-# 3. Run system
-python main.py
-
-# 4. Verify output
-ls -la *_results.json
-```
-
-### Docker Deployment
-
-**Dockerfile**:
-```dockerfile
-FROM python:3.9
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . /app
-WORKDIR /app
-
-# Use environment-specific config
-COPY config.prod.yaml config.yaml
-
-CMD ["python", "main.py"]
-```
-
-**docker-compose.yml**:
-```yaml
-version: '3'
-services:
-  event-horizon:
-    build: .
-    environment:
-      - NEWS_API_KEY=${NEWS_API_KEY}
-    volumes:
-      - ./config.prod.yaml:/app/config.yaml
-      - ./results:/app/results
-```
-
----
-
-## Summary
-
-### To Activate/Deactivate Agents:
-
-1. Edit `config.yaml`
-2. Set `enabled: true` or `enabled: false`
-3. Run `python main.py`
-
-**That's it!** No code changes needed.
-
-### Current Setup (Per Your Request):
-
-```yaml
-agents:
-  news_agent:
-    enabled: false  # ✅ Deactivated
-
-  report_agent:
-    enabled: true   # ✅ Activated
-```
-
-Run:
-```bash
-python main.py
-```
-
-You'll get only the Report Agent output with earnings and fund data!
+1. **Use `.env` files** -- never hardcode API keys
+2. **Set `AGENTS_FILE`** to a persistent, writable path
+3. **Monitor LLM health** via `GET /health` endpoint
+4. **Use `LOG_LEVEL=debug`** during development
+5. **Keep `.env` out of git** -- use `.env.example` as template
