@@ -138,6 +138,7 @@ class CustomAgentRequest(BaseModel):
     input_data: Optional[dict] = None
     llm_config: Optional[dict] = None
     execution_mode: Optional[str] = None
+    available_tools: Optional[List[str]] = None
 
 
 class GenerateSystemPromptRequest(BaseModel):
