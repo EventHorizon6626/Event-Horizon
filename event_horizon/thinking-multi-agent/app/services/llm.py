@@ -46,7 +46,7 @@ async def call_llm(prompt: str, system_prompt: str = None) -> str:
         "model": LLM_MODEL,
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 4096,
+        "max_tokens": 3072,
         "stream": False,
     }
 
@@ -75,7 +75,7 @@ async def call_llm(prompt: str, system_prompt: str = None) -> str:
 async def call_llm_full(
     messages: List[Dict[str, str]],
     temperature: float = 1.0,
-    max_tokens: int = 4096,
+    max_tokens: int = 3072,
 ) -> Dict[str, Any]:
     """Full chat completion with reasoning extraction. Replaces _run_analysis()."""
     logger.info(
@@ -132,7 +132,7 @@ async def call_llm_full(
 async def stream_llm(
     messages: List[Dict[str, str]],
     temperature: float = 1.0,
-    max_tokens: int = 4096,
+    max_tokens: int = 3072,
 ) -> AsyncGenerator[str, None]:
     """Stream SSE lines from the LLM backend."""
     logger.info("stream_llm: starting, messages=%d, temperature=%.2f, model=%s", len(messages), temperature, LLM_MODEL)
