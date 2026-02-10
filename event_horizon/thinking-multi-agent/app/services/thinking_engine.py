@@ -518,6 +518,19 @@ async def run_thinking_loop(
                 })
 
         elif action == "create_data_agent":
+            if not allow_agent_creation:
+                # Safety net: LLM chose create_data_agent despite prompt not offering it
+                logger.warning(
+                    "Iteration %d: LLM chose create_data_agent but allow_agent_creation=False — forcing final response",
+                    iteration,
+                )
+                final_result = await generate_final_response(system_prompt, context)
+                thinking_steps.append({
+                    "iteration": iteration, "thought": reasoning,
+                    "action": "generate_response", "result": final_result,
+                })
+                break
+
             agent_name = thought.get("agent_name", "Custom Data Agent")
             agent_description = thought.get("agent_description", "")
             data_type = thought.get("data_type", "specialized data")
