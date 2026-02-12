@@ -1,5 +1,6 @@
 """Named agent endpoints — data agents, bull-bear, custom, prompt gen, think."""
 
+import asyncio
 import json
 import logging
 import os
@@ -154,18 +155,21 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
                     "source": "eh_pipeline",
                     "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
                 })
-            for custom in discovery.get("custom", []):
-                prompt = await generate_data_agent_prompt(
-                    custom, request.stocks, bull_bear_prompt,
-                )
-                required_agents.append({
-                    "name": custom.get("name", "custom-data-agent"),
-                    "description": custom.get("description", ""),
-                    "type": "data",
-                    "source": "web_search",
-                    "system_prompt": prompt,
-                    "data_type": custom.get("data_type", "specialized data"),
-                })
+            custom_agents = discovery.get("custom", [])
+            if custom_agents:
+                prompts = await asyncio.gather(*[
+                    generate_data_agent_prompt(c, request.stocks, bull_bear_prompt)
+                    for c in custom_agents
+                ])
+                for custom, prompt in zip(custom_agents, prompts):
+                    required_agents.append({
+                        "name": custom.get("name", "custom-data-agent"),
+                        "description": custom.get("description", ""),
+                        "type": "data",
+                        "source": "web_search",
+                        "system_prompt": prompt,
+                        "data_type": custom.get("data_type", "specialized data"),
+                    })
             # Fallback: if discovery returned nothing, use all standard tools
             if not required_agents:
                 logger.warning("Bull-Bear Analyzer: discovery returned no tools, falling back to all standard")
@@ -353,19 +357,22 @@ async def run_custom_agent(request: CustomAgentRequest):
                 "source": "eh_pipeline",
                 "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
             })
-        # Custom/exotic agents (web search based)
-        for custom in discovery.get("custom", []):
-            prompt = await generate_data_agent_prompt(
-                custom, request.stocks, request.system_prompt,
-            )
-            required_agents.append({
-                "name": custom.get("name", "custom-data-agent"),
-                "description": custom.get("description", ""),
-                "type": "data",
-                "source": "web_search",
-                "system_prompt": prompt,
-                "data_type": custom.get("data_type", "specialized data"),
-            })
+        # Custom/exotic agents (web search based) — parallel prompt generation
+        custom_agents = discovery.get("custom", [])
+        if custom_agents:
+            prompts = await asyncio.gather(*[
+                generate_data_agent_prompt(c, request.stocks, request.system_prompt)
+                for c in custom_agents
+            ])
+            for custom, prompt in zip(custom_agents, prompts):
+                required_agents.append({
+                    "name": custom.get("name", "custom-data-agent"),
+                    "description": custom.get("description", ""),
+                    "type": "data",
+                    "source": "web_search",
+                    "system_prompt": prompt,
+                    "data_type": custom.get("data_type", "specialized data"),
+                })
 
         if required_agents:
             logger.info(
@@ -470,7 +477,7 @@ async def generate_agent_system_prompt(request: GenerateSystemPromptRequest):
             )
 
         logger.info("System prompt generation: meta_prompt_len=%d", len(meta_prompt))
-        system_prompt = await call_llm(meta_prompt)
+        system_prompt = await call_llm(meta_prompt, max_tokens=1536)
 
         cleaned_prompt = system_prompt.strip()
         logger.info("Generated system prompt: length=%d", len(cleaned_prompt))

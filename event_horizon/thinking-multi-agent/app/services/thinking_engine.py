@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import re
 from typing import Any, Dict, List
 
@@ -95,7 +96,7 @@ async def think_step(
     logger.debug("think_step: full prompt:\n%s", prompt)
 
     try:
-        response = await call_llm(prompt)
+        response = await call_llm(prompt, temperature=0.3, max_tokens=2024)
         logger.info("think_step: raw LLM response:\n%s", response)
         thought = json.loads(_clean_json(response))
         logger.info(
@@ -153,7 +154,7 @@ Provide your final analysis in JSON format. Include:
     logger.debug("generate_final_response: full prompt:\n%s", prompt)
 
     try:
-        response = await call_llm(prompt)
+        response = await call_llm(prompt, max_tokens=2048)
         logger.info("generate_final_response: raw LLM response:\n%s", response)
         try:
             parsed = json.loads(_clean_json(response))
@@ -240,10 +241,15 @@ Return structured JSON:
 async def generate_data_agent_prompt(
     thought: dict, stocks: List[str] = None, analyzer_task: str = "",
 ) -> str:
-    """Generate a rich system prompt for a custom data agent via LLM meta-prompting.
+    """Generate a system prompt for a custom data agent.
 
-    Falls back to _build_data_agent_prompt_template() if the LLM call fails.
+    By default uses the fast template. Set ENABLE_META_PROMPTING=true to use
+    the slower LLM meta-prompting path for richer prompts.
     """
+    if os.getenv("ENABLE_META_PROMPTING", "false").lower() != "true":
+        logger.info("generate_data_agent_prompt: template mode (ENABLE_META_PROMPTING=false)")
+        return _build_data_agent_prompt_template(thought, stocks, analyzer_task)
+
     data_type = thought.get("data_type", "specialized data")
     agent_name = thought.get("agent_name", "Custom Data Agent")
     description = thought.get("agent_description", "Retrieve and process financial data")
@@ -274,7 +280,7 @@ async def generate_data_agent_prompt(
     )
 
     try:
-        result = await call_llm(meta_prompt)
+        result = await call_llm(meta_prompt, max_tokens=1024)
         cleaned = result.strip() if result else ""
 
         if len(cleaned) >= 100:
@@ -350,7 +356,7 @@ async def discover_required_tools(
     )
 
     try:
-        response = await call_llm(prompt)
+        response = await call_llm(prompt, temperature=0.3, max_tokens=2024)
         logger.info("discover_required_tools: raw LLM response:\n%s", response)
         parsed = json.loads(_clean_json(response))
 
@@ -359,6 +365,12 @@ async def discover_required_tools(
         custom = parsed.get("custom", [])
         if not isinstance(custom, list):
             custom = []
+
+        # Cap custom agents to prevent unbounded exotic agent creation
+        max_custom = int(os.getenv("MAX_CUSTOM_AGENTS", "3"))
+        if len(custom) > max_custom:
+            logger.info("discover_required_tools: capping custom agents from %d to %d", len(custom), max_custom)
+            custom = custom[:max_custom]
 
         logger.info(
             "discover_required_tools: standard=%s, custom_count=%d, reasoning=%s",
