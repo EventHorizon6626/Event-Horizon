@@ -29,7 +29,12 @@ def _endpoint() -> str:
     return f"{base}/v1/chat/completions"
 
 
-async def call_llm(prompt: str, system_prompt: str = None) -> str:
+async def call_llm(
+    prompt: str,
+    system_prompt: str = None,
+    temperature: float = 0.7,
+    max_tokens: int = 3072,
+) -> str:
     """Simple prompt->text helper. Replaces call_gemini()."""
     messages: List[dict] = []
     if system_prompt:
@@ -37,16 +42,16 @@ async def call_llm(prompt: str, system_prompt: str = None) -> str:
     messages.append({"role": "user", "content": prompt})
 
     logger.info(
-        "call_llm: endpoint=%s, model=%s, prompt_len=%d, has_system_prompt=%s, messages=%d",
-        _endpoint(), LLM_MODEL, len(prompt), system_prompt is not None, len(messages),
+        "call_llm: endpoint=%s, model=%s, prompt_len=%d, has_system_prompt=%s, messages=%d, temperature=%.2f, max_tokens=%d",
+        _endpoint(), LLM_MODEL, len(prompt), system_prompt is not None, len(messages), temperature, max_tokens,
     )
     logger.debug("call_llm: full prompt:\n%s", prompt)
 
     payload = {
         "model": LLM_MODEL,
         "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": 3072,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
         "stream": False,
     }
 
