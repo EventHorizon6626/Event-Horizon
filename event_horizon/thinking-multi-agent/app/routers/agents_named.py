@@ -216,8 +216,6 @@ async def run_bull_bear_analyzer(request: AnalyzerRequest):
                     symbol_features[sym] = feat
 
         # Run the debate with the resolved symbol_features
-        import asyncio
-
         from event_horizon.analyzer_system import BullBearAnalyzer
         from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
 
