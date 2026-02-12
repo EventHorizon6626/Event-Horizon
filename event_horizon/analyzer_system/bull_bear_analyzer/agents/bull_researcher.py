@@ -113,6 +113,10 @@ class BullResearcher:
             argument = self._parse_response(argument, result)
             argument.tokens_used = result.get("total_tokens", 0)
 
+            # Store full LLM reasoning for transparency
+            argument.raw_llm_response = result.get("content", "")
+            argument.llm_prompt = result.get("prompt", "")
+
             if self.enable_opik:
                 argument.opik_trace_id = "auto-tracked"
 
@@ -194,6 +198,7 @@ Be BULLISH! This is your role in the debate."""
         return {
             "content": response.choices[0].message.content,
             "total_tokens": response.usage.total_tokens,
+            "prompt": prompt,
         }
 
     def _parse_response(self, argument: BullArgument, result: Dict[str, Any]) -> BullArgument:

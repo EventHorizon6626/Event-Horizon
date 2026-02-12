@@ -121,6 +121,10 @@ class ResearchManager:
             thesis = self._parse_response(thesis, result)
             thesis.tokens_used = result.get("total_tokens", 0)
 
+            # Store full LLM reasoning for transparency
+            thesis.raw_llm_response = result.get("content", "")
+            thesis.llm_prompt = result.get("prompt", "")
+
             if self.enable_opik:
                 thesis.opik_trace_id = "auto-tracked"
 
@@ -200,6 +204,7 @@ Be OBJECTIVE and BALANCED. Consider both sides fairly."""
         return {
             "content": response.choices[0].message.content,
             "total_tokens": response.usage.total_tokens,
+            "prompt": prompt,
         }
 
     def _parse_response(self, thesis: InvestmentThesis, result: Dict[str, Any]) -> InvestmentThesis:

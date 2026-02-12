@@ -35,6 +35,10 @@ class BullArgument:
     opik_trace_id: Optional[str] = None
     tokens_used: int = 0
 
+    # Full LLM reasoning (for transparency and debugging)
+    raw_llm_response: str = ""  # Complete LLM output including all reasoning
+    llm_prompt: str = ""  # The prompt sent to the LLM
+
     # Metadata
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
@@ -64,6 +68,10 @@ class BearArgument:
     # Opik tracking
     opik_trace_id: Optional[str] = None
     tokens_used: int = 0
+
+    # Full LLM reasoning (for transparency and debugging)
+    raw_llm_response: str = ""  # Complete LLM output including all reasoning
+    llm_prompt: str = ""  # The prompt sent to the LLM
 
     # Metadata
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
@@ -102,6 +110,10 @@ class InvestmentThesis:
     opik_trace_id: Optional[str] = None
     tokens_used: int = 0
 
+    # Full LLM reasoning (for transparency and debugging)
+    raw_llm_response: str = ""  # Complete LLM output including all reasoning
+    llm_prompt: str = ""  # The prompt sent to the LLM
+
     # Metadata
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
@@ -122,6 +134,8 @@ class InvestmentThesis:
             "bear_case": self.bear_case,
             "opik_trace_id": self.opik_trace_id,
             "tokens_used": self.tokens_used,
+            "raw_llm_response": self.raw_llm_response,
+            "llm_prompt": self.llm_prompt,
             "timestamp": self.timestamp,
         }
 
