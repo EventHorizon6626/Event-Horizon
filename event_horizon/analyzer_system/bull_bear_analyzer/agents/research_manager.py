@@ -33,6 +33,7 @@ from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import (
     BullArgument,
     InvestmentThesis,
 )
+from event_horizon.analyzer_system.bull_bear_analyzer.utils.json_parser import extract_json_from_llm_response
 
 
 class ResearchManager:
@@ -209,23 +210,24 @@ Be OBJECTIVE and BALANCED. Consider both sides fairly."""
 
     def _parse_response(self, thesis: InvestmentThesis, result: Dict[str, Any]) -> InvestmentThesis:
         """Parse LLM response into InvestmentThesis"""
-        try:
-            data = json.loads(result["content"])
+        # Use robust JSON extraction that handles reasoning text
+        data = extract_json_from_llm_response(result["content"])
 
-            thesis.recommendation = data.get("recommendation", "HOLD")
-            thesis.confidence = data.get("confidence", 0.0)
-            thesis.position_size = data.get("position_size", "small")
-            thesis.thesis_summary = data.get("thesis_summary", "")
-            thesis.bull_case_summary = data.get("bull_case_summary", "")
-            thesis.bear_case_summary = data.get("bear_case_summary", "")
-            thesis.bull_probability = data.get("bull_probability", 0.5)
-            thesis.bear_probability = data.get("bear_probability", 0.5)
-            thesis.base_case = data.get("base_case", "")
-            thesis.bull_case = data.get("bull_case", "")
-            thesis.bear_case = data.get("bear_case", "")
-
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse manager response: {e}")
+        if data is None:
+            self.logger.error(f"Failed to extract JSON from manager response. Content: {result['content'][:200]}...")
             thesis.thesis_summary = "Error parsing response"
+            return thesis
+
+        thesis.recommendation = data.get("recommendation", "HOLD")
+        thesis.confidence = data.get("confidence", 0.0)
+        thesis.position_size = data.get("position_size", "small")
+        thesis.thesis_summary = data.get("thesis_summary", "")
+        thesis.bull_case_summary = data.get("bull_case_summary", "")
+        thesis.bear_case_summary = data.get("bear_case_summary", "")
+        thesis.bull_probability = data.get("bull_probability", 0.5)
+        thesis.bear_probability = data.get("bear_probability", 0.5)
+        thesis.base_case = data.get("base_case", "")
+        thesis.bull_case = data.get("bull_case", "")
+        thesis.bear_case = data.get("bear_case", "")
 
         return thesis

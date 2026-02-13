@@ -29,6 +29,7 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import BearArgument, BullArgument
+from event_horizon.analyzer_system.bull_bear_analyzer.utils.json_parser import extract_json_from_llm_response
 from event_horizon.data_pipeline.stage_3.models.schemas import SymbolFeatures
 
 
@@ -216,20 +217,21 @@ Be BEARISH! This is your role in the debate."""
 
     def _parse_response(self, argument: BearArgument, result: Dict[str, Any]) -> BearArgument:
         """Parse LLM response into BearArgument"""
-        try:
-            data = json.loads(result["content"])
+        # Use robust JSON extraction that handles reasoning text
+        data = extract_json_from_llm_response(result["content"])
 
-            argument.recommendation = data.get("recommendation", "SELL")
-            argument.confidence = data.get("confidence", 0.0)
-            argument.target_price = data.get("target_price")
-            argument.time_horizon = data.get("time_horizon", "")
-            argument.thesis = data.get("thesis", "")
-            argument.key_risks = data.get("key_risks", [])
-            argument.supporting_evidence = data.get("supporting_evidence", [])
-            argument.bull_case_rebuttal = data.get("bull_case_rebuttal", [])
-
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse bear response: {e}")
+        if data is None:
+            self.logger.error(f"Failed to extract JSON from bear response. Content: {result['content'][:200]}...")
             argument.thesis = "Error parsing response"
+            return argument
+
+        argument.recommendation = data.get("recommendation", "SELL")
+        argument.confidence = data.get("confidence", 0.0)
+        argument.target_price = data.get("target_price")
+        argument.time_horizon = data.get("time_horizon", "")
+        argument.thesis = data.get("thesis", "")
+        argument.key_risks = data.get("key_risks", [])
+        argument.supporting_evidence = data.get("supporting_evidence", [])
+        argument.bull_case_rebuttal = data.get("bull_case_rebuttal", [])
 
         return argument
