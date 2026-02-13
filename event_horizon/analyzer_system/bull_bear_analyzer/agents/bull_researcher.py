@@ -29,6 +29,7 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 from event_horizon.analyzer_system.bull_bear_analyzer.models.schemas import BullArgument
+from event_horizon.analyzer_system.bull_bear_analyzer.utils.json_parser import extract_json_from_llm_response
 from event_horizon.data_pipeline.stage_3.models.schemas import SymbolFeatures
 
 
@@ -203,20 +204,21 @@ Be BULLISH! This is your role in the debate."""
 
     def _parse_response(self, argument: BullArgument, result: Dict[str, Any]) -> BullArgument:
         """Parse LLM response into BullArgument"""
-        try:
-            data = json.loads(result["content"])
+        # Use robust JSON extraction that handles reasoning text
+        data = extract_json_from_llm_response(result["content"])
 
-            argument.recommendation = data.get("recommendation", "BUY")
-            argument.confidence = data.get("confidence", 0.0)
-            argument.target_price = data.get("target_price")
-            argument.time_horizon = data.get("time_horizon", "")
-            argument.thesis = data.get("thesis", "")
-            argument.key_catalysts = data.get("key_catalysts", [])
-            argument.supporting_evidence = data.get("supporting_evidence", [])
-            argument.risk_acknowledgment = data.get("risk_acknowledgment", [])
-
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse bull response: {e}")
+        if data is None:
+            self.logger.error(f"Failed to extract JSON from bull response. Content: {result['content'][:200]}...")
             argument.thesis = "Error parsing response"
+            return argument
+
+        argument.recommendation = data.get("recommendation", "BUY")
+        argument.confidence = data.get("confidence", 0.0)
+        argument.target_price = data.get("target_price")
+        argument.time_horizon = data.get("time_horizon", "")
+        argument.thesis = data.get("thesis", "")
+        argument.key_catalysts = data.get("key_catalysts", [])
+        argument.supporting_evidence = data.get("supporting_evidence", [])
+        argument.risk_acknowledgment = data.get("risk_acknowledgment", [])
 
         return argument
