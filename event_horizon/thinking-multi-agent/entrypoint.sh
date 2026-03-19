@@ -24,8 +24,8 @@ else
     --reasoning-parser mistral \
     --enable-auto-tool-choice \
     --tool-call-parser mistral \
-    --max-model-len 32768 \
-    --gpu-memory-utilization 0.85 \
+    --max-model-len 16384 \
+    --gpu-memory-utilization 0.50 \
     --max-num-batched-tokens 8192 \
     --dtype bfloat16 \
     --tensor-parallel-size 1 \
