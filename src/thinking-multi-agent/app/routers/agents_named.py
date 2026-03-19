@@ -1,0 +1,534 @@
+"""Named agent endpoints — data agents, bull-bear, custom, prompt gen, think."""
+
+import asyncio
+import json
+import logging
+import os
+
+from fastapi import APIRouter, HTTPException
+
+from models import (
+    AgentRequest,
+    AnalysisResponse,
+    AnalyzerRequest,
+    CustomAgentRequest,
+    GenerateSystemPromptRequest,
+    ThinkingAgentRequest,
+)
+from services.data_agents import STAGE1_CONFIG, execute_tool
+from services.web_search import search_for_stocks
+from services.llm import LLM_MODEL, call_llm, call_llm_full
+from services.thinking_engine import (
+    TOOLS_DESCRIPTION,
+    discover_required_tools,
+    generate_data_agent_prompt,
+    run_thinking_loop,
+    think_step,
+)
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/agents", tags=["agents-named"])
+
+
+# ── Data agent endpoints ──
+
+@router.post("/candlestick")
+async def run_candlestick_agent(request: AgentRequest):
+    """Execute Candlestick agent for given stocks."""
+    try:
+        logger.info("Running Candlestick agent for stocks=%s, period=%s, timeframe=%s", request.stocks, request.period, request.timeframe)
+        result = await execute_tool("candlestick", request.stocks, period=request.period, interval=request.timeframe)
+        logger.info("Candlestick agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("Candlestick agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/earnings")
+async def run_earnings_agent(request: AgentRequest):
+    """Execute Earnings agent for given stocks."""
+    try:
+        logger.info("Running Earnings agent for stocks=%s", request.stocks)
+        result = await execute_tool("earnings", request.stocks)
+        logger.info("Earnings agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("Earnings agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/news")
+async def run_news_agent(request: AgentRequest):
+    """Execute News agent for given stocks."""
+    try:
+        days = request.days or 7
+        logger.info("Running News agent for stocks=%s, days=%d", request.stocks, days)
+        result = await execute_tool("news", request.stocks, days_back=days)
+        logger.info("News agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("News agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/technical")
+async def run_technical_agent(request: AgentRequest):
+    """Execute Technical Analysis agent for given stocks."""
+    try:
+        logger.info("Running Technical agent for stocks=%s, indicators=%s", request.stocks, request.indicators)
+        overrides = {}
+        if request.indicators:
+            overrides["indicators"] = request.indicators
+        result = await execute_tool("technical", request.stocks, **overrides)
+        logger.info("Technical agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("Technical agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/fundamentals")
+async def run_fundamentals_agent(request: AgentRequest):
+    """Execute Fundamentals agent for given stocks."""
+    try:
+        logger.info("Running Fundamentals agent for stocks=%s", request.stocks)
+        result = await execute_tool("fundamentals", request.stocks)
+        logger.info("Fundamentals agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("Fundamentals agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/web-search")
+async def run_web_search_agent(request: AgentRequest):
+    """Execute Web Search agent for given stocks."""
+    try:
+        logger.info("Running Web Search agent for stocks=%s", request.stocks)
+        result = await search_for_stocks(request.stocks)
+        logger.info("Web Search agent complete: result_keys=%s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+        return result
+    except Exception as e:
+        logger.error("Web Search agent failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ── Bull-Bear Analyzer ──
+
+@router.post("/bull-bear-analyzer")
+async def run_bull_bear_analyzer(request: AnalyzerRequest):
+    """Run the Bull-Bear coupled analyzer that performs internal debate.
+
+    Three paths:
+      A) No data and no raw_data → return needs_data with required agents list
+      B) raw_data provided → process through Stage 1→2→3, then run debate
+      C) data provided → existing behaviour (pre-processed SymbolFeatures)
+    """
+    try:
+        has_data = request.data and len(request.data) > 0
+        has_raw = request.raw_data and len(request.raw_data) > 0
+        logger.info(
+            "Bull-Bear Analyzer: stocks=%s, has_data=%s, has_raw_data=%s",
+            request.stocks, has_data, has_raw,
+        )
+
+        # ── Path A: no data at all → discover needed data agents, then tell frontend ──
+        if not has_data and not has_raw:
+            logger.info("Bull-Bear Analyzer: Path A — discovering required data agents")
+            bull_bear_prompt = (
+                "You are a Bull-Bear Analyzer. Conduct an internal debate: "
+                "build the strongest BULLISH case, then the strongest BEARISH counter-argument, "
+                "then synthesize both sides into a final balanced investment thesis."
+            )
+            discovery = await discover_required_tools(
+                system_prompt=bull_bear_prompt,
+                stocks=request.stocks,
+                available_tools=list(TOOLS_DESCRIPTION.keys()),
+            )
+            required_agents = []
+            for tool_name in discovery.get("standard", []):
+                required_agents.append({
+                    "name": tool_name,
+                    "type": "data",
+                    "source": "eh_pipeline",
+                    "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
+                })
+            custom_agents = discovery.get("custom", [])
+            if custom_agents:
+                prompts = await asyncio.gather(*[
+                    generate_data_agent_prompt(c, request.stocks, bull_bear_prompt)
+                    for c in custom_agents
+                ])
+                for custom, prompt in zip(custom_agents, prompts):
+                    required_agents.append({
+                        "name": custom.get("name", "custom-data-agent"),
+                        "description": custom.get("description", ""),
+                        "type": "data",
+                        "source": "web_search",
+                        "system_prompt": prompt,
+                        "data_type": custom.get("data_type", "specialized data"),
+                    })
+            # Fallback: if discovery returned nothing, use all standard tools
+            if not required_agents:
+                logger.warning("Bull-Bear Analyzer: discovery returned no tools, falling back to all standard")
+                for tool_name in TOOLS_DESCRIPTION:
+                    required_agents.append({
+                        "name": tool_name,
+                        "type": "data",
+                        "source": "eh_pipeline",
+                        "description": TOOLS_DESCRIPTION[tool_name],
+                    })
+            logger.info(
+                "Bull-Bear Analyzer: Path A — needs_data with %d agents: %s",
+                len(required_agents), [a["name"] for a in required_agents],
+            )
+            return {
+                "status": "needs_data",
+                "agent": "bull_bear_analyzer",
+                "required_agents": required_agents,
+            }
+
+        # ── Path B: raw_data from connected data agents → process pipeline ──
+        if has_raw:
+            logger.info("Bull-Bear Analyzer: Path B — processing raw_data through pipeline")
+            from services.data_processing import process_raw_to_features
+
+            symbol_features = process_raw_to_features(request.stocks, request.raw_data)
+            logger.info("Bull-Bear Analyzer: Path B — got %d symbol features", len(symbol_features))
+        else:
+            # ── Path C: pre-processed SymbolFeatures in data ──
+            logger.info("Bull-Bear Analyzer: Path C — using pre-processed data")
+            import dataclasses
+
+            from event_horizon.data_pipeline.stage_3.models.schemas import SymbolFeatures
+
+            raw_features = request.data or {}
+            valid_fields = {f.name for f in dataclasses.fields(SymbolFeatures)}
+            symbol_features = {}
+            for sym, feat in raw_features.items():
+                if isinstance(feat, dict):
+                    filtered = {k: v for k, v in feat.items() if k in valid_fields}
+                    filtered["symbol"] = sym
+                    symbol_features[sym] = SymbolFeatures(**filtered)
+                else:
+                    symbol_features[sym] = feat
+
+        # Run the debate with the resolved symbol_features
+        from event_horizon.analyzer_system import BullBearAnalyzer
+        from event_horizon.data_pipeline.stage_3.models.schemas import Stage3Output
+
+        analyzer = BullBearAnalyzer(
+            config={
+                "llm_model": os.getenv("LLM_MODEL", "mistralai/Ministral-3-14B-Reasoning-2512"),
+                "temperature": 0.7,
+                "enable_opik": False,
+            }
+        )
+        stage3_data = Stage3Output(
+            portfolio_id=f"portfolio_{'-'.join(request.stocks)}",
+            symbols=request.stocks,
+            symbol_features=symbol_features,
+        )
+        result = await asyncio.to_thread(analyzer.execute, stage3_data)
+        logger.info("Bull-Bear Analyzer: complete for stocks=%s", request.stocks)
+        return {"status": "success", "agent": "bull_bear_analyzer", "result": result}
+    except Exception as e:
+        logger.error("Bull-Bear Analyzer failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ── Custom agent ──
+
+@router.post("/custom", response_model=AnalysisResponse)
+async def run_custom_agent(request: CustomAgentRequest):
+    """Execute a custom agent with user-provided system prompt.
+
+    If input_data is provided (from connected pipeline nodes), runs analysis
+    directly. Otherwise, uses a thinking step to discover what data agents
+    are needed and returns them as required_agents with status='needs_data'.
+    """
+    try:
+        logger.info(
+            "=== CUSTOM AGENT START === stocks=%s, has_input_data=%s, has_user_prompt=%s, system_prompt_len=%d",
+            request.stocks, request.input_data is not None, request.user_prompt is not None, len(request.system_prompt or ""),
+        )
+        logger.info("Custom Agent system_prompt:\n%s", request.system_prompt)
+
+        # ── Path A: we already have data from connected nodes ──
+        # input_data is expected to be SymbolFeatures (EH DNA) from the pipeline
+        if request.input_data:
+            logger.info("Custom Agent: Path A — using provided input_data")
+            input_data_json = json.dumps(request.input_data, indent=2, default=str)
+            logger.info("Custom Agent: input_data keys=%s, total_len=%d", list(request.input_data.keys()) if isinstance(request.input_data, dict) else type(request.input_data).__name__, len(input_data_json))
+            logger.debug("Custom Agent: full input_data:\n%s", input_data_json)
+
+            user_prompt = request.user_prompt or f"Analyze the following stocks: {request.stocks}"
+            data_summary = input_data_json[:8000]
+            if len(input_data_json) > 8000:
+                logger.info("Custom Agent: input_data truncated from %d to 8000 chars for LLM prompt", len(input_data_json))
+
+            messages = [
+                {"role": "system", "content": request.system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        f"{user_prompt}\n\n"
+                        f"Stocks: {request.stocks}\n\n"
+                        f"EH-processed SymbolFeatures from data pipeline:\n{data_summary}\n\n"
+                        f"Provide your analysis based on these extracted features."
+                    ),
+                },
+            ]
+            logger.info("Custom Agent: sending %d messages to LLM (system_len=%d, user_len=%d)", len(messages), len(messages[0]["content"]), len(messages[1]["content"]))
+
+            result = await call_llm_full(messages)
+            logger.info(
+                "Custom Agent: Path A complete — model=%s, content_len=%d, has_reasoning=%s",
+                result["model"], len(result.get("content", "")), result.get("reasoning") is not None,
+            )
+            logger.info("Custom Agent: Path A analysis result:\n%s", result.get("content", "")[:3000])
+            if result.get("reasoning"):
+                logger.info("Custom Agent: Path A reasoning:\n%s", result["reasoning"][:3000])
+
+            return AnalysisResponse(
+                status="success",
+                analysis=result["content"],
+                reasoning=result.get("reasoning"),
+                model=result["model"],
+                usage=result.get("usage"),
+                agent_name="custom",
+            )
+
+        # ── Path B: no data — discover what tools are needed (or fetch if execution_mode) ──
+        is_fetch_mode = request.execution_mode == "fetch_data"
+        logger.info(
+            "Custom Agent: Path B — %s (no input_data provided)",
+            "fetch mode (execution_mode=fetch_data)" if is_fetch_mode else "running discovery mode",
+        )
+        # In fetch mode, allow callers to restrict which tools the agent can use
+        # (e.g. exotic data agents only get web_search, not all 6 standard tools)
+        if is_fetch_mode and request.available_tools:
+            available_tools = request.available_tools
+        else:
+            available_tools = list(TOOLS_DESCRIPTION.keys())
+        logger.info("Custom Agent: Path B available_tools=%s", available_tools)
+
+        # ── Fetch mode: use thinking loop to actually execute tools ──
+        if is_fetch_mode:
+            loop_result = await run_thinking_loop(
+                stocks=request.stocks,
+                system_prompt=request.system_prompt,
+                max_iterations=5,
+                available_tools=available_tools,
+                discovery_only=False,
+                allow_agent_creation=False,
+            )
+            # Always return from fetch mode — never fall through to discovery
+            final = loop_result.get("final_result", {})
+            analysis_text = json.dumps(final, indent=2, default=str) if isinstance(final, dict) else str(final)
+            logger.info(
+                "=== CUSTOM AGENT COMPLETE (fetch mode) === status=%s, analysis_text_len=%d",
+                loop_result.get("status"), len(analysis_text),
+            )
+            return AnalysisResponse(
+                status="success",
+                analysis=analysis_text,
+                model=LLM_MODEL,
+                agent_name="custom",
+            )
+
+        # ── Discovery mode: single-shot tool discovery (one LLM call) ──
+        discovery = await discover_required_tools(
+            system_prompt=request.system_prompt,
+            stocks=request.stocks,
+            available_tools=available_tools,
+        )
+
+        required_agents = []
+        # Standard EH pipeline agents
+        for tool_name in discovery.get("standard", []):
+            required_agents.append({
+                "name": tool_name,
+                "type": "data",
+                "source": "eh_pipeline",
+                "description": TOOLS_DESCRIPTION.get(tool_name, "data"),
+            })
+        # Custom/exotic agents (web search based) — parallel prompt generation
+        custom_agents = discovery.get("custom", [])
+        if custom_agents:
+            prompts = await asyncio.gather(*[
+                generate_data_agent_prompt(c, request.stocks, request.system_prompt)
+                for c in custom_agents
+            ])
+            for custom, prompt in zip(custom_agents, prompts):
+                required_agents.append({
+                    "name": custom.get("name", "custom-data-agent"),
+                    "description": custom.get("description", ""),
+                    "type": "data",
+                    "source": "web_search",
+                    "system_prompt": prompt,
+                    "data_type": custom.get("data_type", "specialized data"),
+                })
+
+        if required_agents:
+            logger.info(
+                "=== CUSTOM AGENT: NEEDS_DATA (single-shot) === required_agents=%s",
+                json.dumps(required_agents, default=str),
+            )
+            return AnalysisResponse(
+                status="needs_data",
+                model=LLM_MODEL,
+                required_agents=required_agents,
+            )
+
+        # No tools needed — fall through to direct response generation
+        logger.info("Custom Agent: Path B — no tools discovered, generating response directly")
+        loop_result = await run_thinking_loop(
+            stocks=request.stocks,
+            system_prompt=request.system_prompt,
+            max_iterations=3,
+            available_tools=available_tools,
+            discovery_only=False,
+        )
+        final = loop_result.get("final_result", {})
+        analysis_text = json.dumps(final, indent=2, default=str) if isinstance(final, dict) else str(final)
+        logger.info("Custom Agent: fallback analysis_text_len=%d", len(analysis_text))
+
+        logger.info("=== CUSTOM AGENT COMPLETE === status=success (no tools needed)")
+        return AnalysisResponse(
+            status="success",
+            analysis=analysis_text,
+            model=LLM_MODEL,
+            agent_name="custom",
+        )
+
+    except Exception as e:
+        logger.error("Custom Agent failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ── System prompt generator ──
+
+CATEGORY_CONTEXTS = {
+    "market_analyzer": "You analyze market data, trends, and patterns to provide investment insights.",
+    "risk_analyzer": "You evaluate and manage risk for investment decisions, focusing on portfolio safety.",
+    "bull_bear_analyzer": "You provide balanced analysis of both bullish and bearish perspectives on investments.",
+    "sentiment_analyzer": "You analyze market sentiment from news, social media, and public opinion.",
+    "technical_analyzer": "You perform technical analysis on price charts and trading indicators.",
+    "fundamental_analyzer": "You analyze company fundamentals, financials, and intrinsic value.",
+    "custom_analyzer": "You perform specialized analysis based on your unique focus area.",
+    "strategy_agent": "You provide strategic investment recommendations based on your analysis.",
+    "data_retriever": "You retrieve and process financial data for other agents.",
+    "news_agent": "You analyze news and market sentiment.",
+    "technical_agent": "You perform technical analysis on price and volume data.",
+}
+
+
+@router.post("/generate-agent-system-prompt")
+async def generate_agent_system_prompt(request: GenerateSystemPromptRequest):
+    """Generate a system prompt from agent name, description, and category."""
+    try:
+        logger.info("Generating system prompt for agent: name=%s, category=%s, description_len=%d", request.name, request.category, len(request.description or ""))
+        category_context = CATEGORY_CONTEXTS.get(request.category, CATEGORY_CONTEXTS["strategy_agent"])
+        description_text = request.description.strip() if request.description else ""
+
+        if not description_text:
+            meta_prompt = (
+                f"You are an expert at creating system prompts for AI agents in a multi-agent trading system.\n\n"
+                f"Create a focused system prompt for an agent with the following characteristics:\n\n"
+                f"**Agent Name:** {request.name}\n"
+                f"**Category:** {category_context}\n\n"
+                f"IMPORTANT: No description was provided, so infer the agent's purpose from its NAME.\n\n"
+                f"CONSTRAINTS:\n"
+                f"- Keep the prompt concise: 800-1500 characters maximum\n"
+                f"- Define 3-5 specific responsibilities inferred from the name\n"
+                f"- Use a simple JSON output format relevant to the inferred task\n"
+                f"- Do NOT add unrelated analysis domains or data requirements\n\n"
+                f"The system prompt should:\n"
+                f"1. Define the agent's role based on its name\n"
+                f"2. List 3-5 responsibilities tied to the inferred purpose\n"
+                f"3. Specify expected input (stocks list + relevant data)\n"
+                f"4. Define a concise JSON output format\n\n"
+                f'Write ONLY the system prompt. Start directly with "You are..."'
+            )
+        else:
+            meta_prompt = (
+                f"You are an expert at creating system prompts for AI agents in a multi-agent financial analysis system.\n\n"
+                f"Create a focused system prompt for an agent with the following characteristics:\n\n"
+                f"**Agent Name:** {request.name}\n"
+                f"**CORE PURPOSE (follow this exactly):** {description_text}\n\n"
+                f"STRICT CONSTRAINTS:\n"
+                f"- The description above is the SINGLE SOURCE OF TRUTH for what this agent does\n"
+                f"- Every responsibility must trace directly back to the description — do NOT infer, expand, or add tangential capabilities\n"
+                f"- Do NOT add financial analysis domains (technical, fundamental, sentiment, etc.) unless the description explicitly mentions them\n"
+                f"- Do NOT add data requirements beyond what the description implies\n"
+                f"- Keep the prompt concise: 800-1500 characters maximum\n"
+                f"- Define 3-5 specific responsibilities, each one directly derived from the description\n\n"
+                f"The system prompt should:\n"
+                f"1. Define the agent's role using the exact language of the description\n"
+                f"2. List 3-5 responsibilities — every one traceable to the description\n"
+                f"3. Specify expected input (stocks list + only data relevant to the described task)\n"
+                f"4. Define a concise JSON output format relevant to the described task\n\n"
+                f'Write ONLY the system prompt. Start directly with "You are..."'
+            )
+
+        logger.info("System prompt generation: meta_prompt_len=%d", len(meta_prompt))
+        system_prompt = await call_llm(meta_prompt, max_tokens=1536)
+
+        cleaned_prompt = system_prompt.strip()
+        logger.info("Generated system prompt: length=%d", len(cleaned_prompt))
+        logger.info("Generated system prompt content:\n%s", cleaned_prompt)
+        if not cleaned_prompt:
+            raise Exception("AI service generated an empty system prompt. Please try again or provide a description.")
+        if len(cleaned_prompt) < 50:
+            raise Exception("Generated system prompt is too short. Please provide a more descriptive agent name or add a description.")
+
+        return {"status": "success", "system_prompt": cleaned_prompt}
+    except Exception as e:
+        logger.error("System prompt generation failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate system prompt: {e}. Please try providing a description for better results.",
+        ) from e
+
+
+# ── Thinking agent ──
+
+@router.post("/think")
+async def run_thinking_agent(request: ThinkingAgentRequest):
+    """Execute a thinking agent with iterative ReAct-style reasoning loop."""
+    try:
+        logger.info(
+            "=== THINKING AGENT START === stocks=%s, system_prompt_len=%d, has_input_data=%s, max_iterations=%d, available_tools=%s",
+            request.stocks, len(request.system_prompt or ""), request.input_data is not None, request.max_iterations, request.available_tools,
+        )
+        logger.info("Thinking Agent system_prompt:\n%s", request.system_prompt)
+        if request.input_data:
+            logger.info("Thinking Agent input_data keys: %s", list(request.input_data.keys()) if isinstance(request.input_data, dict) else type(request.input_data).__name__)
+
+        result = await run_thinking_loop(
+            stocks=request.stocks,
+            system_prompt=request.system_prompt,
+            input_data=request.input_data,
+            max_iterations=request.max_iterations,
+            available_tools=request.available_tools,
+        )
+
+        logger.info(
+            "=== THINKING AGENT COMPLETE === status=%s, iterations=%s, tools_used=%s",
+            result.get("status"), result.get("iterations_used"), result.get("tools_used"),
+        )
+        if result.get("final_result"):
+            final = result["final_result"]
+            logger.info(
+                "Thinking Agent final_result keys=%s",
+                list(final.keys()) if isinstance(final, dict) else type(final).__name__,
+            )
+            logger.info("Thinking Agent final_result:\n%s", json.dumps(final, indent=2, default=str) if isinstance(final, dict) else str(final))
+
+        return result
+    except Exception as e:
+        logger.error("Thinking Agent failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
