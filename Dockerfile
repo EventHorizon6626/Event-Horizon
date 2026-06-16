@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir .
 
 # ---- Runtime stage ----
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 RUN groupadd --gid 1000 app \
     && useradd --uid 1000 --gid app --shell /bin/bash --create-home app
