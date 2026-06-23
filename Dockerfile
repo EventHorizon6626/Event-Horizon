@@ -1,22 +1,29 @@
-FROM vllm/vllm-openai:latest
+# ---- Build stage ----
+FROM python:3.11-slim AS builder
 
-# Install app dependencies first (layer caching)
-COPY event_horizon/thinking-multi-agent/app/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+WORKDIR /app
 
-# Copy the full event_horizon package (needed for Stage 1 agents, analyzers, etc.)
-COPY event_horizon/ /opt/event_horizon/
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir .
 
-# Copy the FastAPI app
-COPY event_horizon/thinking-multi-agent/app/ /app/
+# ---- Runtime stage ----
+FROM python:3.11-slim AS runtime
 
-# Copy the entrypoint script
-COPY event_horizon/thinking-multi-agent/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN groupadd --gid 1000 app \
+    && useradd --uid 1000 --gid app --shell /bin/bash --create-home app
 
-# event_horizon package must be importable
-ENV PYTHONPATH="/opt"
+WORKDIR /app
 
-EXPOSE 8030
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY . .
 
-ENTRYPOINT ["/entrypoint.sh"]
+USER app
+
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import httpx; httpx.get('http://localhost:5000/health').raise_for_status()"]
+
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "5000"]
